@@ -4,3 +4,57 @@
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
 
 .cover.tone0{background:linear-gradient(140deg,#255a70,#131e32)}.cover.tone1{background:linear-gradient(140deg,#655182,#13243a)}.cover.tone2{background:linear-gradient(140deg,#476c57,#151f35)}.cover.tone3{background:linear-gradient(140deg,#806148,#132033)}.cover.tone4{background:linear-gradient(140deg,#39527a,#173d46)}.cover.tone5{background:linear-gradient(140deg,#765669,#192a3e)}
+
+
+/* LAN Library 0.2 — freigegebene 70%-Gaming-Designsprache */
+:root{--bg:#030b14;--panel:#0b2131;--border:#28516a;--muted:#a6bccb;--white:#edfaff;--teal:#23e0e4;--gold:#eac777;--danger:#f2a15f;font-family:Inter,"Segoe UI",system-ui,-apple-system,sans-serif}
+body{min-width:320px;background:radial-gradient(ellipse 52% 32% at 80% 0%,#10517054,transparent 80%),radial-gradient(ellipse 65% 38% at 0% 34%,#062c4070,transparent 70%),linear-gradient(180deg,#040d17 0%,#03111c 50%,#05101b 100%);color:var(--white);font-size:14px}
+.wrap{max-width:1140px;padding:0 18px 115px;isolation:isolate}
+.header{height:96px;margin:0 -18px;padding:0 20px;overflow:hidden;border-bottom:1px solid #3a73824d;background:linear-gradient(90deg,#05101af8 20%,#0a2237dd 90%);box-shadow:0 9px 35px #0008;backdrop-filter:blur(16px)}
+.header-scenery{position:absolute;z-index:-1;inset:0;background:url('./assets/night-summit.svg') center 48%/cover no-repeat;opacity:.75;mask-image:linear-gradient(90deg,transparent 19%,#000 55%,#000 100%);pointer-events:none}
+.header:after{content:'';pointer-events:none;position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#04111c 0%,#04111c60 42%,#04111ca8 100%)}
+.brand{gap:11px;font-size:clamp(19px,4.7vw,25px);letter-spacing:-.7px;font-weight:850;text-shadow:0 2px 15px #0009}
+.brand em{color:#26e6ea;font-style:italic}.brand small{font-size:9px;letter-spacing:1.55px;line-height:1.8;color:#b4cddd}
+.brand-icon{width:49px;height:49px;border-radius:15px;border:1px solid #15d8e2;background:linear-gradient(140deg,#0b3b50d4,#052336);box-shadow:inset 0 1px 5px #84f6fa35,0 0 27px #00d6e826;color:#20eff8}.brand-icon .ui-icon{width:34px;height:34px}
+.ui-icon{display:inline-block;vertical-align:middle;flex-shrink:0}
+.head-actions{gap:9px}.icon-btn{height:44px;width:44px;background:linear-gradient(150deg,#214056db,#091d30dd);border:1px solid #5473879c;border-radius:14px;box-shadow:0 7px 18px #0007,inset 0 1px 2px #b3edff1a}.icon-btn .ui-icon{width:21px;height:21px}.icon-btn.primary{background:linear-gradient(160deg,#0b4c60,#041e2f);border-color:#18edf0;box-shadow:0 0 19px #00cbdf30;color:#50f8ff}
+.intro{margin:25px 4px 17px}.section-kicker{color:#19d7e4;font-size:10px;letter-spacing:2.3px;font-weight:850}.intro h1{font-size:clamp(25px,5.8vw,32px);letter-spacing:-.8px;margin-top:6px;margin-bottom:5px;font-weight:800}.intro p{color:#9db8c8;font-size:13px}
+.search{height:55px;border-radius:17px;border:1px solid #36758b;background:linear-gradient(120deg,#12354abe,#092133cf);box-shadow:inset 0 1px 2px #aff9ff0e,0 11px 26px #0006}.search span{color:#39e4e9}.search .ui-icon{width:22px;height:22px}.search input::placeholder{color:#9abac8}
+.bar{gap:9px;margin-top:13px}.sort-box{flex:1}.menu-btn,.mini-btn{min-height:47px;border-radius:14px;border:1px solid #3d657e;background:linear-gradient(145deg,#193d51e8,#081d2fcf);box-shadow:inset 0 1px 1px #a0e8ff14,0 5px 17px #0006;color:#d9f1fa}.menu-btn{font-weight:700}.menu-btn b{color:#39dce4}.filter-btn{display:flex;align-items:center;justify-content:center;gap:6px;min-width:103px}.filter-btn .ui-icon{width:16px;height:16px}.mini-btn{font-size:20px;color:#49e6ed}
+.sort-pop{background:#0b2132f5;backdrop-filter:blur(19px);border:1px solid #42a7b0;border-radius:15px;box-shadow:0 22px 40px #000d}.sort-pop button{background:#1b3545;border-radius:10px}.sort-pop button.on{background:#0b5661;color:#bcffff}
+.filter-panel{background:linear-gradient(145deg,#112c3de8,#071a2aee);border:1px solid #337f91;border-radius:21px;box-shadow:0 14px 34px #0009,inset 0 1px 1px #94fbff20;padding:18px}
+.choice-list{background:#071926}.choice-item{background:#142d3b;border-color:#345769}.choice-item.active{background:#12606a;border-color:#18d9e0;color:#e7ffff}
+.list-heading{margin-top:27px;margin-bottom:13px}.list-heading h2{font-size:17px;letter-spacing:-.25px}.list-heading span{color:#92c0cd;font-size:12px}
+.cards{gap:12px}
+.game-card{position:relative;border-radius:19px;overflow:hidden;border:1px solid #376a7d89;background:linear-gradient(118deg,#12354bc9,#0a1c2eeb 67%,#081725ed);box-shadow:0 11px 30px #0009,inset 0 1px 1px #8adaff1a;transition:border-color .16s,box-shadow .16s,transform .16s}
+.game-card:hover{border-color:#4ccfd2;box-shadow:0 0 0 1px #34cdd13a,0 13px 30px #000a,0 0 21px #07b2c217}
+.game-card .game-top{min-height:172px;gap:12px}
+.cover{width:120px;min-height:163px;border-radius:14px;background:radial-gradient(circle at 32% 22%,#2f65796b,transparent 65%),linear-gradient(155deg,#193f56,#0d1d2d 70%,#071018);flex-shrink:0}
+.cover:after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px #b0dfff30,inset 0 -28px 33px #040d16a3;border-radius:inherit}
+.cover.tone0{background:linear-gradient(150deg,#1b5960,#071828)}.cover.tone1{background:linear-gradient(150deg,#55436b,#061725)}.cover.tone2{background:linear-gradient(150deg,#5d4b37,#051826)}.cover.tone3{background:linear-gradient(150deg,#234e65,#071d2f)}.cover.tone4{background:linear-gradient(150deg,#24594d,#061728)}.cover.tone5{background:linear-gradient(150deg,#5a3548,#061826)}
+.game-card .cover{border-radius:17px 8px 8px 0}
+.fallback-cover{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;font-size:14px;line-height:1.28;font-weight:900;letter-spacing:.2px;text-shadow:0 2px 7px #000b;padding:14px}.fallback-cover small{color:#48d5da;font-weight:800;letter-spacing:1px;font-size:8px}
+.cover img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 25%;color:transparent}
+.game-content{padding:14px 12px 10px 0;display:flex;flex-direction:column;justify-content:center}
+.game-content h3{font-size:16px;line-height:1.23;font-weight:790;max-height:59px;margin:0 0 9px;letter-spacing:-.26px}
+.game-genre{color:#9fbccb!important;font-size:11px!important;margin:0 0 8px!important}
+.mode-row{gap:6px}.tag{border-radius:9px;font-size:11px;font-weight:680;padding:5px 7px;background:#1c3549b3;border:1px solid #375a74;color:#daedff}.tag.ok{background:#0b4a3da6;border-color:#1f8b72;color:#83ebbb}.tag.warn{background:#553b16b7;border-color:#af7d22;color:#f8cc77}
+.game-subdata{display:flex;flex-wrap:wrap;align-items:center;gap:11px;margin-top:10px;color:#bed2de;font-size:11px;font-weight:600}.game-subdata .ui-icon{width:14px;height:14px}.people-count{display:flex;align-items:center;gap:4px}
+.metric-row{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:10px;gap:6px}.metric-row>div{background:#082030a9;border:1px solid #23485b;border-radius:9px;padding:5px 7px;min-height:30px}.metric-row small{font-size:9px;color:#8caabf;letter-spacing:.65px}.metric-row strong{font-size:13px}.metric-row .teal{color:#36d9e8}.metric-row .gold{color:#e3d18c}
+.game-foot{padding:9px 12px;background:linear-gradient(100deg,#0c2637a6,#091a2bd1);border-top:1px solid #2d506361;min-height:53px}.avatar{width:32px;height:32px;border-color:#3bc2c9;background:linear-gradient(130deg,#173a4d,#061c2b)}.owner-count{font-size:11px;color:#a8c4d1}
+.badge{border-radius:9px;background:#132e3e;border:1px solid #376579;color:#a9d6e0;padding:7px 9px;font-size:10px}.badge.subdued{border-color:#375365;color:#9bb6c3}.badge.score{background:#0c413a;border-color:#1c917a;color:#b6ffde}
+.bottom{left:50%;transform:translateX(-50%);max-width:820px;width:calc(100% - 16px);border:1px solid #3a7684;border-bottom:0;border-radius:28px 28px 0 0;background:linear-gradient(180deg,#112f42f7,#061a2afa);box-shadow:0 -9px 35px #000b,0 0 24px #0cb4ca17;padding:7px 10px max(10px,env(safe-area-inset-bottom))}
+.bottom button{font-size:22px;min-width:78px;gap:4px;min-height:53px;border-radius:18px}.bottom .ui-icon{width:24px;height:24px}.bottom button span{font-size:11px}.bottom button.selected{color:#6ff7ff;background:linear-gradient(180deg,#096a75cb,#09425472);box-shadow:0 0 19px #0bd6df24,inset 0 1px 0 #98f7fa18}
+.hero{border:1px solid #42768a;box-shadow:0 0 30px #03d4da1e,0 13px 33px #0009}.hero .cover{height:280px}.hero .cover img{object-fit:cover;object-position:center}.hero .cover:after{display:none}
+.panel{border-radius:21px;background:linear-gradient(142deg,#142e41eb,#0b1c2dea);border:1px solid #36677b;box-shadow:0 15px 27px #0008,inset 0 1px 1px #a0faff15}.stats>div{background:#0e2b3a;border-color:#326076}.profile-head{background:linear-gradient(120deg,#123d53,#0b1c2c);border-radius:20px;border:1px solid #4b7b8f}
+.auth-card{background:linear-gradient(150deg,#17364ae8,#061522f8);border-color:#39748a;box-shadow:0 24px 40px #0009}
+@media(min-width:850px){.cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.game-card .game-top{min-height:183px}.game-card .cover{width:138px}.wrap{padding-bottom:125px}}
+@media(min-width:1100px){.game-card .cover{width:149px}.game-content h3{font-size:17px}.game-card .game-top{min-height:193px}}
+@media(max-width:430px){.wrap{padding:0 12px 110px}.header{margin:0 -12px;padding:0 13px;height:82px}.brand{font-size:19px;gap:8px}.brand small{font-size:7px;letter-spacing:1.25px}.brand-icon{width:43px;height:43px;border-radius:13px}.brand-icon .ui-icon{width:29px;height:29px}.head-actions{gap:6px}.head-actions .icon-btn{width:40px;height:40px;border-radius:12px}.intro{margin:21px 3px 15px}.intro h1{font-size:26px}.game-card .game-top{min-height:158px;gap:11px}.game-card .cover{width:113px;min-height:158px}.game-content{padding:10px 10px 8px 0}.game-content h3{font-size:15px;margin-bottom:8px}.tag{font-size:10px;padding:5px 6px}.game-subdata{margin-top:7px;gap:8px}.metric-row{margin-top:8px}.owner-count{font-size:10px}.game-foot{padding:8px 10px}.bottom button{min-width:76px}.filter-btn{min-width:100px}}
+@media(max-width:365px){.head-actions .icon-btn{width:36px;height:38px}.brand-icon{width:39px;height:39px}.brand{font-size:18px}.game-card .cover{width:98px}.game-content h3{font-size:14px}.metric-row{gap:4px}.metric-row>div{padding:4px 5px}.tag{font-size:9.5px}.owner-count{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.game-card{transition:none}}
+
+/* Header-Berglandschaft sichtbar über dem Hintergrund */
+.header{background:linear-gradient(90deg,#04111cfb 0%,#051421e6 30%,#0614218c 69%,#05142188 100%),url('./assets/night-summit.svg') center 55%/cover no-repeat}
+.header-scenery,.header:after{display:none}
+@media(min-width:850px){.bottom{display:none}.wrap{padding-bottom:70px}}
