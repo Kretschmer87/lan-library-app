@@ -58,3 +58,153 @@ body{min-width:320px;background:radial-gradient(ellipse 52% 32% at 80% 0%,#10517
 .header{background:linear-gradient(90deg,#04111cfb 0%,#051421e6 30%,#0614218c 69%,#05142188 100%),url('./assets/night-summit.svg') center 55%/cover no-repeat}
 .header-scenery,.header:after{display:none}
 @media(min-width:850px){.bottom{display:none}.wrap{padding-bottom:70px}}
+
+
+/* LAN LIBRARY 0.3 — actual implementation aligned with approved 70% mobile visual design.
+   Real data only; no invented scores, owners or Steam reviews. */
+:root{--v3-ink:#e9faff;--v3-cyan:#39eaf0;--v3-glass:rgba(16,42,59,.91);--v3-line:rgba(99,179,204,.42);--v3-warm:#ffc376}
+body{min-width:320px;font-size:15px;color:var(--v3-ink);background:
+  radial-gradient(ellipse 660px 480px at 14% 16%,rgba(0,148,179,.13),transparent 70%),
+  radial-gradient(ellipse 520px 490px at 95% 44%,rgba(20,103,163,.14),transparent 75%),
+  radial-gradient(ellipse 590px 490px at 4% 88%,rgba(38,51,113,.1),transparent 76%),
+  linear-gradient(180deg,#030c16 0%,#071421 44%,#030a13 100%);
+  background-attachment:fixed}
+.wrap{max-width:930px;margin:0 auto;padding:0 20px 100px}
+.header{height:105px;margin:0 -20px;padding:0 25px;border-bottom:1px solid rgba(66,175,195,.28);
+  background:linear-gradient(90deg,rgba(1,12,23,.97) 0%,rgba(3,20,33,.86) 34%,rgba(2,20,36,.42) 71%,rgba(3,15,30,.74) 100%),url('./assets/night-summit.svg') center 54%/cover no-repeat;
+  backdrop-filter:blur(22px);box-shadow:0 16px 38px #0009,0 1px 0 #60f3f019;overflow:hidden}
+.brand{font-size:28px;font-weight:900;letter-spacing:-1.0px;gap:13px;text-shadow:0 2px 14px #000a}
+.brand em{color:#34f0ef;text-shadow:0 0 17px #12dcdb46}
+.brand small{letter-spacing:2px;color:#b4c7d9;font-size:10px;line-height:2.15}
+.brand-icon{width:56px;height:56px;border-radius:17px;border:1px solid #35edf0;
+  background:linear-gradient(138deg,#103c54a8,#091b2ce8);box-shadow:inset 0 1px 1px #ddffff73,0 0 24px #08c9d23f}
+.brand-icon .ui-icon{width:39px;height:39px;color:#56f4f2;filter:drop-shadow(0 0 7px #3ef3ea6f)}
+.head-actions{gap:11px}.icon-btn{width:49px;height:49px;border-radius:15px;border:1px solid #588197b0;
+  background:linear-gradient(155deg,#2f5161d6,#0a1928ed);box-shadow:inset 0 1px 1px #c3fbff38,0 9px 19px #0008}
+.icon-btn.primary{border-color:#2dfbff;color:#70f9f5;box-shadow:inset 0 1px 1px #aaffff70,0 0 22px #06e8e74a}
+.icon-btn .ui-icon{width:25px;height:25px}
+.intro{display:none}
+main{padding-top:18px}
+.search{height:59px;border-radius:20px;padding:0 18px;border:1px solid #5c91a4a3;
+  background:linear-gradient(165deg,rgba(56,83,103,.64),rgba(12,28,46,.91) 60%);
+  backdrop-filter:blur(25px);box-shadow:inset 0 1px 1px #d5fcff3b,0 12px 30px #0007,0 0 13px #2ec5d114}
+.search .ui-icon{width:25px;height:25px;filter:drop-shadow(0 0 4px #54edf044)}
+.search input{font-size:16px;font-weight:500}.search input::placeholder{color:#b8ced7}
+.bar{display:grid;grid-template-columns:minmax(0,1.1fr)56px minmax(115px,.8fr);gap:11px;margin-top:15px;align-items:stretch}
+.menu-btn,.mini-btn{border:1px solid #60889b9c;border-radius:16px;min-height:57px;
+  background:linear-gradient(148deg,rgba(61,91,109,.74),rgba(13,34,51,.92) 68%);
+  box-shadow:inset 0 1px 1px #c4faff4e,inset 0 -1px 0 #06131b,0 8px 21px #0007;
+  color:#f6ffff;font-size:15px;font-weight:800}
+.sort-box .menu-btn{padding:12px 16px}
+.mini-btn{width:56px;color:#54f8fb;filter:none}.filter-btn{width:100%;min-width:0;gap:10px}.filter-btn .ui-icon{width:22px;height:22px;color:#42f0f2}
+.pill{background:#38edf1;color:#08272c;font-weight:900}
+.sort-pop,.filter-panel{z-index:7;background:linear-gradient(145deg,#15354aee,#071b2bed);backdrop-filter:blur(25px);border:1px solid #4f899d;border-radius:20px;box-shadow:0 20px 42px #000b}
+.sort-pop{min-width:220px;top:63px}
+.list-heading{margin:25px 2px 16px;justify-content:space-between;gap:12px}
+.list-heading h2{display:flex;align-items:center;gap:10px;margin:0;font-size:21px;font-weight:830;letter-spacing:-.5px;color:#f5fcff}
+.section-game-icon{display:inline-flex;color:#42f0ef;filter:drop-shadow(0 0 6px #03d9e569)}
+.section-game-icon .ui-icon{width:26px;height:26px}
+.list-heading .result-pill{font-size:13px;font-weight:800;color:#59eff0;background:linear-gradient(145deg,#173a47,#0d2735);
+  border:1px solid #416c78;border-radius:20px;padding:7px 12px;white-space:nowrap;box-shadow:inset 0 1px 1px #a7f7fc1f}
+.cards{display:grid;grid-template-columns:minmax(0,1fr)!important;gap:19px}
+.game-card{position:relative;isolation:isolate;overflow:hidden;border-radius:27px;
+  border:1px solid rgba(109,184,209,.48);
+  background:radial-gradient(ellipse at 69% 2%,rgba(67,120,138,.31),transparent 64%),linear-gradient(125deg,rgba(33,65,81,.96),rgba(8,23,40,.96) 70%);
+  box-shadow:inset 0 1px 1px #b8fdff40,inset 0 -1px 0 #09202e,0 16px 34px rgba(0,0,0,.64),0 0 24px #09ccdf13;
+  transition:border-color .16s ease,transform .16s ease,box-shadow .16s ease}
+.game-card:before{content:'';position:absolute;z-index:-1;pointer-events:none;inset:0;border-radius:inherit;
+  background:linear-gradient(140deg,rgba(255,255,255,.08),transparent 26%,transparent 67%,rgba(0,213,232,.025));}
+.game-card:hover{border-color:#65e6ec;box-shadow:inset 0 1px 1px #bfffff44,0 18px 40px #000b,0 0 25px #23dbe43a}
+.game-card:focus-visible{outline:2px solid #5bf3ff;outline-offset:4px}
+.game-card .game-top{display:grid;grid-template-columns:minmax(0,37%) minmax(0,1fr);gap:0;min-height:220px}
+.game-card .cover{height:100%;min-height:220px;width:100%!important;border-radius:25px 14px 14px 25px;
+  box-shadow:inset 0 0 0 1px #99d6ff5e,8px 0 30px rgba(1,12,22,.34);z-index:1}
+.game-card .cover:after{display:block;box-shadow:inset 0 0 0 1px #d2fcff4a,inset 0 -22px 30px #06121b86}
+.game-card .cover img{object-position:50% 28%;object-fit:cover}
+.game-card .game-content{padding:17px 18px 12px 20px;display:flex;flex-direction:column;justify-content:center;gap:0;min-width:0}
+.card-title-line{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.game-content h3{font-size:clamp(17px,2.8vw,25px);line-height:1.13;font-weight:850;letter-spacing:-.6px;margin:0 0 10px;max-height:none;
+  color:#fff;text-shadow:0 3px 14px #0007}
+.card-open{font-size:32px;line-height:.8;color:#d1ecf5;opacity:.72;font-weight:250;margin-top:2px}
+.game-genre{margin:-5px 0 9px!important;color:#bfd3db!important;font-size:12px!important}
+.mode-row{gap:7px;margin:0 0 1px}.tag{font-size:12px;font-weight:700;padding:6px 10px;border-radius:22px;
+  background:linear-gradient(160deg,rgba(59,85,102,.7),rgba(27,46,63,.8));border:1px solid #4f687a93;color:#e8f3fc;
+  box-shadow:inset 0 1px 1px #b2f6ff1e}
+.tag.ok{background:linear-gradient(125deg,#123c33,#124337d6);border-color:#1f8b66;color:#89f6b7}
+.tag.warn{background:linear-gradient(125deg,#49311d,#3e291b);border-color:#ad793b;color:#ffe0a1}
+.game-subdata{margin-top:8px;gap:14px;color:#bcd1da;font-size:12px}
+.game-subdata .ui-icon{width:16px;height:16px;color:#adc5d7}
+.metric-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:11px}
+.metric-row>div{min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:5px;
+  min-height:64px;padding:9px 12px;border-radius:15px;border:1px solid #4066799c;
+  background:linear-gradient(145deg,rgba(63,98,108,.39),rgba(15,41,56,.77));
+  box-shadow:inset 0 1px 1px #e4ffff24,0 5px 14px #0004}
+.metric-row .metric-group{border-color:#78694785;background:linear-gradient(145deg,rgba(97,73,34,.37),rgba(26,38,45,.77))}
+.metric-row small{font-size:10px;font-weight:850;color:#c4d1d6;letter-spacing:.9px}
+.metric-row strong{font-size:clamp(20px,3vw,25px);line-height:1.05;font-weight:900;letter-spacing:-.5px}
+.metric-row .teal{color:#6cf3d1;text-shadow:0 0 13px #00debb29}
+.metric-row .gold{color:#ffc57e;text-shadow:0 0 13px #f6a6412c}
+.metric-row .muted{color:#90aeba}
+.card-members{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:10px;
+  padding-top:9px;border-top:1px solid #618ca33d}
+.card-members .owners{gap:7px;flex:1;min-width:0}.card-members .avatar{width:34px;height:34px;border-color:#75d9db;background:linear-gradient(130deg,#1e6072,#122032)}
+.card-members .owner-count{font-size:12px;color:#c1d5dd;white-space:normal;line-height:1.2}
+.card-members .badge{font-size:11px;border-radius:13px;padding:8px 11px;flex-shrink:0;
+  box-shadow:inset 0 1px 1px #e1fcff20}
+.badge.score{background:linear-gradient(155deg,#124c3b,#10362d);color:#b8ffdd;border:1px solid #4ecb99}
+.badge.subdued{background:linear-gradient(155deg,#203b4c,#142739);border-color:#43657d;color:#c6d4db}
+.game-card .mismatch{padding:9px 17px;background:#382f23;color:#ffd59c;border-top:1px solid #846c35}
+.bottom{background:linear-gradient(180deg,rgba(38,67,85,.96),rgba(6,26,42,.98));border:1px solid #558a9e;
+  box-shadow:inset 0 1px 1px #ccfaff56,0 -14px 38px #000b,0 0 24px #00c7d818}
+.bottom button.selected{background:linear-gradient(155deg,#0b8291,#09455d);box-shadow:inset 0 1px 1px #affaff66,0 0 21px #18d9dd38}
+.panel,.filter-panel,.profile-head{backdrop-filter:blur(18px);border-color:#458297;border-radius:23px;
+  box-shadow:inset 0 1px 1px #e0ffff28,0 15px 34px #0008,0 0 17px #0bb8d514}
+.hero{border-radius:25px;box-shadow:inset 0 1px 1px #d3ffff35,0 0 25px #12ceec27,0 20px 40px #0009}
+.btn.primary{background:linear-gradient(145deg,#31cde3,#0a738a);border-color:#70fcff;color:#041a27;
+  box-shadow:inset 0 1px 1px #e6ffff80,0 0 17px #05d1df61;text-shadow:none}
+@media(max-width:900px){
+ .wrap{padding:0 13px 105px;max-width:100%}
+ .header{margin:0 -13px;padding:0 15px;height:83px}
+ .brand{font-size:21px;gap:8px}.brand small{font-size:8px;letter-spacing:1.4px}.brand-icon{width:46px;height:46px;border-radius:14px}.brand-icon .ui-icon{width:32px;height:32px}
+ .head-actions{gap:6px}.icon-btn{width:43px;height:43px;border-radius:13px}.icon-btn .ui-icon{width:21px;height:21px}
+ main{padding-top:14px}.search{height:54px;border-radius:17px}
+ .bar{grid-template-columns:minmax(0,1fr)44px minmax(94px,.53fr);gap:7px;margin-top:10px}
+ .menu-btn,.mini-btn{min-height:49px;border-radius:13px;padding:9px;font-size:13px}
+ .sort-box .menu-btn{padding:9px 12px}.mini-btn{width:44px;font-size:20px}.filter-btn{font-size:13px;gap:5px}.filter-btn .ui-icon{width:17px;height:17px}
+ .list-heading{margin:20px 2px 13px}.list-heading h2{font-size:18px;gap:7px}.section-game-icon .ui-icon{width:22px;height:22px}
+ .cards{gap:14px}.game-card{border-radius:21px}
+ .game-card .game-top{grid-template-columns:minmax(0,38%) minmax(0,1fr);min-height:214px}
+ .game-card .cover{min-height:214px;border-radius:20px 10px 10px 20px}
+ .game-card .game-content{padding:13px 11px 11px 12px}
+ .game-content h3{font-size:clamp(16px,4vw,20px);margin-bottom:7px;line-height:1.14}
+ .card-open{font-size:24px}.mode-row{gap:5px}.tag{font-size:10.5px;padding:5px 7px;border-radius:16px}
+ .game-subdata{margin-top:7px;gap:8px;font-size:11px}
+ .metric-row{gap:6px;margin-top:9px}.metric-row>div{min-height:57px;padding:7px 8px;border-radius:11px;gap:6px}
+ .metric-row small{font-size:8px;letter-spacing:.4px}.metric-row strong{font-size:20px}
+ .card-members{margin-top:9px;padding-top:8px}.card-members .avatar{height:29px;width:29px}.card-members .owner-count{font-size:10px}
+ .card-members .badge{font-size:9px;padding:6px 7px;border-radius:9px}
+ .card-members .badge small{display:none}
+ .bottom{width:calc(100% - 12px);max-width:600px}
+}
+@media(max-width:380px){
+ .brand{font-size:18px}.brand small{font-size:7px}.brand-icon{width:40px;height:40px}
+ .head-actions .icon-btn{width:38px;height:38px}.head-actions{gap:5px}
+ .game-card .game-top{grid-template-columns:minmax(0,37%) minmax(0,1fr);min-height:216px}
+ .game-card .cover{min-height:216px}
+ .game-card .game-content{padding:10px 9px 9px 10px}
+ .game-content h3{font-size:15px}.tag{font-size:9.5px;padding:4px 6px}
+ .metric-row small{font-size:7.5px}.metric-row strong{font-size:18px}
+ .metric-row>div{min-height:54px;padding:7px 6px}
+ .card-members .owner-count{font-size:9px}.card-members .badge{font-size:8px;padding:6px 5px}
+}
+@media(min-width:901px){.bottom{display:none}.wrap{padding-bottom:70px}}
+@media(prefers-reduced-motion:reduce){.game-card{transition:none}}
+/* 0.3.1 – prevent global form styles turning search into a nested input. */
+.search input[type="search"]{background:transparent;border:0;border-radius:0;box-shadow:none;padding:0;min-height:0;height:auto;outline:none;color:#f3fcff;width:100%;font-size:16px}
+.search input[type="search"]:focus{border:0;outline:0;box-shadow:none}
+/* Keep ownership and score legible at 320–430px instead of squeezing three avatars, a label and a badge into one line. */
+@media(max-width:600px){
+ .card-members .owners{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;min-width:0}
+ .card-members .owners .owner-count{flex-basis:100%;display:block;width:100%;font-size:10px;white-space:normal}
+ .card-members .badge{align-self:center}
+}
