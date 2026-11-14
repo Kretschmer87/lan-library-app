@@ -47,15 +47,24 @@ export class CloudRepository {
   async joinGroup(token,displayName,initials){const id=await this.rpc('join_lan_group',{p_invite:token,p_name:displayName,p_initials:initials});await this.groupForUser();return id}
   async createInvite(){ensure(this.membership?.role==='admin','Adminrechte erforderlich');return this.rpc('create_lan_invite',{p_group_id:this.membership.group_id})}
   async load(){if(!this.membership)await this.groupForUser();if(!this.membership)return null;const groupId=this.membership.group_id;
-    const [members,games,ownership,ratings,favorites,notes]=await Promise.all([
+    const [members,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections]=await Promise.all([
       this.rest('group_members','select=group_id,user_id,role,joined_at&group_id=eq.'+groupId),
       this.rest('games','select=*&group_id=eq.'+groupId+'&order=title.asc'),
       this.rest('game_ownership','select=*&limit=5000'),this.rest('game_ratings','select=*&limit=5000'),
-      this.rest('game_favorites','select=*&limit=5000'),this.rest('game_comments','select=*&order=created_at.desc&limit=1000')
+      this.rest('game_favorites','select=*&limit=5000'),this.rest('game_comments','select=*&order=created_at.desc&limit=1000'),
+      this.rest('member_hardware','select=*&group_id=eq.'+groupId),
+      this.rest('lan_events','select=*&group_id=eq.'+groupId+'&order=created_at.desc'),
+      this.rest('lan_date_options','select=*&limit=1000'),
+      this.rest('lan_date_votes','select=*&limit=2000'),
+      this.rest('lan_attendance','select=*&limit=1000'),
+      this.rest('lan_game_wishes','select=*&limit=3000'),
+      this.rest('lan_game_selections','select=*&limit=1000')
     ]);
     const ids=members.map(m=>m.user_id).join(',');const profiles=ids?await this.rest('profiles','select=user_id,display_name,initials,avatar_path&user_id=in.('+ids+')'):[];
-    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes};
+    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections};
   }
+  async searchSteam(query){const term=String(query||'').trim().slice(0,100);ensure(term.length>=2,'Suchbegriff zu kurz');return this.request('/functions/v1/steam-catalog?'+new URLSearchParams({action:'search',q:term}));}
+  async steamDetails(appId){ensure(Number.isInteger(+appId)&&+appId>0,'Ungültige Steam-App-ID');return this.request('/functions/v1/steam-catalog?'+new URLSearchParams({action:'details',id:String(appId)}));}
   async addGame(g){const record={...g,group_id:this.membership.group_id,created_by:this.user.id};
     const a=await this.rest('games','select=*',{method:'POST',headers:{Prefer:'return=representation'},body:record});return a[0];
   }
@@ -68,6 +77,31 @@ export class CloudRepository {
   }
   async addComment(gameId,category,body){return this.rest('game_comments','',{method:'POST',headers:{Prefer:'return=representation'},body:{game_id:gameId,user_id:this.user.id,category,body}})}
   async updateProfile(display_name,initials){return this.rest('profiles',`user_id=eq.${this.user.id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:{display_name,initials}})}
+  async setHardware(fields){
+    ensure(this.membership?.group_id,'Keine Gruppe zugeordnet');
+    const body={...fields,user_id:this.user.id,group_id:this.membership.group_id};
+    return this.rest('member_hardware','on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body});
+  }
+  async createEvent(name,locationNote){
+    const rows=await this.rest('lan_events','',{method:'POST',headers:{Prefer:'return=representation'},body:{group_id:this.membership.group_id,created_by:this.user.id,name,location_note:locationNote||null,status:'polling'}});
+    return rows[0];
+  }
+  async addDateOption(eventId,startIso,endIso){
+    return this.rest('lan_date_options','',{method:'POST',headers:{Prefer:'return=representation'},body:{event_id:eventId,proposed_by:this.user.id,starts_at:startIso,ends_at:endIso}});
+  }
+  async setDateVote(optionId,response){return this.rest('lan_date_votes','on_conflict=option_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{option_id:optionId,user_id:this.user.id,response}})}
+  async setAttendance(eventId,response){return this.rest('lan_attendance','on_conflict=event_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{event_id:eventId,user_id:this.user.id,response}})}
+  async setWish(eventId,gameId,enabled){
+    if(!enabled)return this.rest('lan_game_wishes',`event_id=eq.${eventId}&game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    return this.rest('lan_game_wishes','on_conflict=event_id,game_id,user_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{event_id:eventId,game_id:gameId,user_id:this.user.id}});
+  }
+  async confirmEvent(eventId,option){ensure(this.membership?.role==='admin','Nur der Admin kann Termine bestätigen');
+    return this.rest('lan_events',`id=eq.${eventId}`,{method:'PATCH',body:{status:'confirmed',starts_at:option.starts_at,ends_at:option.ends_at}});
+  }
+  async setSelection(eventId,gameId,enabled){ensure(this.membership?.role==='admin','Nur der Admin kann Spiele festlegen');
+    if(!enabled)return this.rest('lan_game_selections',`event_id=eq.${eventId}&game_id=eq.${gameId}`,{method:'DELETE'});
+    return this.rest('lan_game_selections','on_conflict=event_id,game_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{event_id:eventId,game_id:gameId,selected_by:this.user.id}});
+  }
   async uploadAvatar(blob){const path=this.user.id+'/avatar.jpg';await this.request('/storage/v1/object/lan-avatars/'+path,{method:'POST',body:blob,headers:{'Content-Type':'image/jpeg','x-upsert':'true'}});
     await this.rest('profiles',`user_id=eq.${this.user.id}`,{method:'PATCH',body:{avatar_path:path}});
     const old=this.avatarCache.get(path);if(old)URL.revokeObjectURL(old);this.avatarCache.delete(path);return path;
