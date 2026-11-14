@@ -1,0 +1,78 @@
+/* LAN Library MVP — cloud adapter using Supabase HTTP APIs.
+ * No service_role key, no secrets; publishable/anon project key only.
+ * Group/member/ownership security is enforced by SQL RLS, never by UI alone.
+ */
+const SESSION_KEY='lan-library-v1-session';
+const API_TIMEOUT_MS=18000;
+function ensure(ok,msg){if(!ok)throw new Error(msg)}
+
+export class CloudRepository {
+  constructor({supabaseUrl,supabaseAnonKey}){
+    ensure(/^https:\/\//.test(supabaseUrl)||/^http:\/\/localhost(?::\d+)?$/.test(supabaseUrl),'Ungültige Supabase-URL');
+    ensure(typeof supabaseAnonKey==='string'&&supabaseAnonKey.length>8,'Supabase Publishable-/Anon-Key fehlt');
+    this.url=supabaseUrl.replace(/\/$/,'');this.key=supabaseAnonKey;
+    try{this.session=JSON.parse(localStorage.getItem(SESSION_KEY)||'null')}catch{this.session=null}
+    this.avatarCache=new Map();this.membership=null;
+  }
+  get user(){return this.session?.user||null}
+  async request(path,{method='GET',body,headers={},auth=true,retry=true,raw=false,timeout=API_TIMEOUT_MS}={}){
+    const h={'apikey':this.key,...headers};
+    if(auth)h.Authorization=`Bearer ${this.session?.access_token||this.key}`;
+    if(body!==undefined && !(body instanceof Blob) && !(body instanceof FormData))h['Content-Type']='application/json';
+    const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);
+    let res;
+    try{res=await fetch(this.url+path,{method,headers:h,body:body===undefined?undefined:body instanceof Blob||body instanceof FormData?body:JSON.stringify(body),signal:ctrl.signal,cache:'no-store'});}catch(e){throw new Error(e.name==='AbortError'?'Netzwerkanfrage abgelaufen. Verbindung prüfen.':'Verbindung fehlgeschlagen: '+e.message)}finally{clearTimeout(timer)}
+    if(res.status===401 && retry && auth && this.session?.refresh_token && !path.includes('/token?')){
+      await this.refreshSession();return this.request(path,{method,body,headers,auth,retry:false,raw,timeout});
+    }
+    if(!res.ok){let txt=await res.text();try{const j=JSON.parse(txt);txt=j.message||j.msg||j.error_description||j.error||j.details||txt}catch{}throw new Error(`${txt||res.statusText} (${res.status})`)}
+    if(raw)return res;
+    const t=await res.text();if(!t)return null;
+    try{return JSON.parse(t)}catch{return t}
+  }
+  saveSession(data){this.session=data;localStorage.setItem(SESSION_KEY,JSON.stringify(data))}
+  async signup(email,password){return this.request('/auth/v1/signup',{method:'POST',auth:false,body:{email,password}})}
+  async signIn(email,password){const s=await this.request('/auth/v1/token?grant_type=password',{method:'POST',auth:false,body:{email,password}});ensure(s.access_token&&s.user,'Anmeldung fehlgeschlagen');this.saveSession(s);return s}
+  async refreshSession(){const refresh_token=this.session?.refresh_token;ensure(refresh_token,'Bitte erneut anmelden');
+    const s=await this.request('/auth/v1/token?grant_type=refresh_token',{method:'POST',auth:false,retry:false,body:{refresh_token}});this.saveSession(s);return s;
+  }
+  async restore(){if(!this.session?.access_token)return null;
+    try{if(Date.now()/1000>(this.session.expires_at||0)-60) await this.refreshSession();const u=await this.request('/auth/v1/user');this.session.user=u;this.saveSession(this.session);return u}catch{this.session=null;localStorage.removeItem(SESSION_KEY);return null}
+  }
+  async logout(){try{await this.request('/auth/v1/logout',{method:'POST'})}catch{}this.session=null;this.membership=null;localStorage.removeItem(SESSION_KEY);this.avatarCache.forEach(v=>URL.revokeObjectURL(v));this.avatarCache.clear()}
+  async rest(table,params='',opts={}){return this.request('/rest/v1/'+table+(params?'?'+params:''),opts)}
+  async rpc(name,args){return this.request('/rest/v1/rpc/'+name,{method:'POST',body:args})}
+  async groupForUser(){ensure(this.user,'Nicht angemeldet');const a=await this.rest('group_members','select=group_id,role,groups(id,name)&user_id=eq.'+this.user.id);this.membership=a?.[0]||null;return this.membership}
+  async createGroup(groupName,displayName,initials){const id=await this.rpc('create_lan_group',{p_group_name:groupName,p_name:displayName,p_initials:initials});await this.groupForUser();return id}
+  async joinGroup(token,displayName,initials){const id=await this.rpc('join_lan_group',{p_invite:token,p_name:displayName,p_initials:initials});await this.groupForUser();return id}
+  async createInvite(){ensure(this.membership?.role==='admin','Adminrechte erforderlich');return this.rpc('create_lan_invite',{p_group_id:this.membership.group_id})}
+  async load(){if(!this.membership)await this.groupForUser();if(!this.membership)return null;const groupId=this.membership.group_id;
+    const [members,games,ownership,ratings,favorites,notes]=await Promise.all([
+      this.rest('group_members','select=group_id,user_id,role,joined_at&group_id=eq.'+groupId),
+      this.rest('games','select=*&group_id=eq.'+groupId+'&order=title.asc'),
+      this.rest('game_ownership','select=*&limit=5000'),this.rest('game_ratings','select=*&limit=5000'),
+      this.rest('game_favorites','select=*&limit=5000'),this.rest('game_comments','select=*&order=created_at.desc&limit=1000')
+    ]);
+    const ids=members.map(m=>m.user_id).join(',');const profiles=ids?await this.rest('profiles','select=user_id,display_name,initials,avatar_path&user_id=in.('+ids+')'):[];
+    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes};
+  }
+  async addGame(g){const record={...g,group_id:this.membership.group_id,created_by:this.user.id};
+    const a=await this.rest('games','select=*',{method:'POST',headers:{Prefer:'return=representation'},body:record});return a[0];
+  }
+  async setOwnership(gameId,targetId,status,launchers=[]){return this.rest('game_ownership','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:targetId,status,launchers:status==='yes'?launchers:[],source:'manual',changed_by:this.user.id}})}
+  async setRating(gameId,rating){if(rating==null)return this.rest('game_ratings',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    return this.rest('game_ratings','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id,rating}})
+  }
+  async setFavorite(gameId,enabled){if(!enabled)return this.rest('game_favorites',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    return this.rest('game_favorites','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id}})
+  }
+  async addComment(gameId,category,body){return this.rest('game_comments','',{method:'POST',headers:{Prefer:'return=representation'},body:{game_id:gameId,user_id:this.user.id,category,body}})}
+  async updateProfile(display_name,initials){return this.rest('profiles',`user_id=eq.${this.user.id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:{display_name,initials}})}
+  async uploadAvatar(blob){const path=this.user.id+'/avatar.jpg';await this.request('/storage/v1/object/lan-avatars/'+path,{method:'POST',body:blob,headers:{'Content-Type':'image/jpeg','x-upsert':'true'}});
+    await this.rest('profiles',`user_id=eq.${this.user.id}`,{method:'PATCH',body:{avatar_path:path}});
+    const old=this.avatarCache.get(path);if(old)URL.revokeObjectURL(old);this.avatarCache.delete(path);return path;
+  }
+  async avatarUrl(path){if(!path)return null;if(this.avatarCache.has(path))return this.avatarCache.get(path);
+    try{const res=await this.request('/storage/v1/object/authenticated/lan-avatars/'+path,{raw:true});const obj=URL.createObjectURL(await res.blob());this.avatarCache.set(path,obj);return obj}catch{return null}
+  }
+}
