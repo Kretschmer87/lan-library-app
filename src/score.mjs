@@ -1,4 +1,4 @@
-/** LAN Library – LAN-Score v1.3. Nutzervorgaben, 15.11.2026. */
+/** LAN Library – LAN-Score v1.4. Feste Gewichte, keine Hochrechnung dünner Daten. */
 export const DEFAULT_WEIGHTS = Object.freeze({
   groupRating: 30,
   steamRating: 20,
@@ -94,9 +94,10 @@ export function wishFactor(game,memberIds,{expectedGroupSize=3}={}){
 }
 
 /**
- * Alle Faktoren summieren sich auf 100%. Unbekanntes wird nicht als 0 gewertet:
- * Die bekannten Faktoren werden proportional hochgerechnet; die Abdeckung
- * bleibt sichtbar. Hardware kann einen Warnhinweis auslösen, hat aber 0 Gewicht.
+ * 30/20/15/20/15 sind feste Gewichte, auch wenn Werte noch unbekannt sind.
+ * Fehlende persönliche Ratings zählen vorläufig neutral mit 5/10 (nicht als
+ * Negativwertung); Besitz/Preis unbekannt ebenfalls neutral 50%. Hardware
+ * bleibt reiner Hinweis. Noch nicht spielbare Titel haben keinen LAN-Score.
  */
 export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEFAULT_WEIGHTS,budgetPerMemberEUR=30,expectedGroupSize=3}={}) {
   if (!Array.isArray(memberIds)||!memberIds.length)throw new Error('memberIds erforderlich');
@@ -119,18 +120,45 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
     ownershipAndPrice:ownershipAndPriceFactor(game,memberIds,{budgetPerMemberEUR,expectedGroupSize}),
     playWishes:wishFactor(game,memberIds,{expectedGroupSize}),
   };
-  let numerator=0,knownWeight=0;
+  // Fehlende Stimmen von Gruppenmitgliedern dürfen keine einzelne Bewertung
+  // künstlich zu einer vollen 30-%-Gruppenwertung machen.
+  const expected=Math.max(expectedGroupSize,memberIds.length);
+  const rateCount=Math.min(ratings.length,expected);
+  const ratedFraction=rateCount/expected;
+  const personalValue=(ratings.reduce((a,n)=>a+n/10,0)+(expected-rateCount)*.5)/expected;
+  factors.groupRating=personalValue;
+  const confidence={
+    groupRating:ratedFraction,
+    steamRating:factors.steamRating==null?0:1,
+    groupSuitability:factors.groupSuitability==null?0:1,
+    ownershipAndPrice:factors.ownershipAndPrice==null?0:1,
+    playWishes:Array.isArray(game.playWishes)&&Array.isArray(game.mustPlays)?Math.min(1,memberIds.length/expected):0,
+  };
+  // Fehlende Angaben erhalten neutrale Annahmen (nicht 0 und nicht 100).
+  // Spielwünsche zählen nur, wenn sie ausdrücklich gesetzt wurden.
+  const neutral={groupRating:.5,steamRating:.5,groupSuitability:.25,ownershipAndPrice:.5,playWishes:0};
+  let weightedSum=0,observedWeight=0;
   for(const [key,weight] of Object.entries(weights)){
     const value=factors[key];
-    if(value!=null){numerator+=value*weight;knownWeight+=weight;}
+    weightedSum+=(value==null?neutral[key]:value)*weight;
+    observedWeight+=(confidence[key]??0)*weight;
   }
-  const coverage=knownWeight/allWeight;
+  const coverage=observedWeight/allWeight;
+  const notReleased=game.releaseStatus==='upcoming'||game.releaseStatus==='unverified';
+  const usefulData=confidence.steamRating||confidence.groupSuitability||confidence.ownershipAndPrice||confidence.groupRating;
+  const score=notReleased||!usefulData?null:Math.round(weightedSum/allWeight*100);
   return {
-    score:knownWeight>0?Math.round(numerator/knownWeight*100):null,
-    provisional:coverage<.999||memberIds.length<expectedGroupSize,
+    score,
+    provisional:coverage<.995||memberIds.length<expectedGroupSize||notReleased,
     coveragePercent:Math.round(coverage*100),
-    factors:Object.fromEntries(Object.entries(factors).map(([key,value])=>[key,{value:value==null?null:Math.round(value*100),weight:weights[key]??0,known:value!=null}])),
+    factors:Object.fromEntries(Object.entries(factors).map(([key,value])=>[key,{
+      value:value==null?null:Math.round(value*100),weight:weights[key]??0,
+      known:key==='groupRating'?rateCount===expected:value!=null,
+      partial:key==='groupRating'?`${rateCount}/${expected} Mitglieder bewertet`:null,
+    }])),
     warnings:[
+      ...(notReleased?['Noch nicht veröffentlicht oder Edition ungeklärt – kein vergleichbarer LAN-Score']:[]),
+      ...(rateCount<expected?[`Eigene Bewertung: ${rateCount} von ${expected} Stimmen bekannt; weitere Stimmen vorläufig neutral`]:[]),
       ...(memberIds.length<expectedGroupSize?[`Noch ${expectedGroupSize-memberIds.length} LAN-Mitglied${expectedGroupSize-memberIds.length===1?'':'er'} nicht beigetreten`]:[]),
       ...(factors.ownershipAndPrice===null?['Besitz oder Preis noch nicht vollständig bekannt']:[]),
       ...hardwareWarnings,

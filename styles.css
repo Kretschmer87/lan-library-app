@@ -463,3 +463,11 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .must-play-toggle.primary{background:linear-gradient(145deg,#a84670,#73254f);border:1px solid #e886ae;color:#fff;box-shadow:0 0 18px #9e427047}
 .hardware-alert{border-color:#b4834d;background:linear-gradient(120deg,#192b35,#34291c)}
 .hardware-alert strong{color:#f0c07a}.hardware-alert p{color:#dbbd99;margin:6px 0 0}
+
+/* v1.4 release flags in every catalog mode */
+.tag.release-soon{color:#ffe0a5;background:#49371cf5;border-color:#bb8a45;font-weight:800;white-space:normal;line-height:1.25}
+.tag.release-unknown{color:#c7d3ff;background:#27344fee;border-color:#637ab6;font-weight:750;white-space:normal;line-height:1.25}
+.game-list-row .tag.release-soon,.game-list-row .tag.release-unknown{align-self:flex-start;padding:3px 7px;font-size:10px}
+.game-card .tag.release-soon,.game-card .tag.release-unknown{font-size:12px}
+.rating-buttons .rate:disabled{filter:grayscale(.8);opacity:.32;cursor:not-allowed}
+@media(max-width:510px){.game-card .tag.release-soon,.game-card .tag.release-unknown{font-size:10px}.game-list-row .tag.release-soon,.game-list-row .tag.release-unknown{font-size:9px}}
