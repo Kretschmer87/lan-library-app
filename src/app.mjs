@@ -87,11 +87,10 @@ export const GENRE_GROUPS=[
 // members can correct every classification from the game details.
 export const TAXONOMY_GROUPS={
  genres:[
-  ['Shooter & Action',[['shooter','Shooter'],['fps','Ego-Shooter (FPS)'],['tps','Third-Person-Shooter'],['action','Action'],['rpg','Rollenspiel (RPG)']]],
-  ['Strategie & Aufbau',[['strategy','Strategie'],['rts','Echtzeitstrategie (RTS)'],['building','Aufbau'],['simulation','Simulation']]],
-  ['Weitere Spieltypen',[['survival','Survival'],['adventure','Abenteuer'],['racing','Rennspiel'],['sport','Sport'],['party','Partyspiel'],['puzzle','Rätsel'],['platformer','Platformer']]]
+  ['Hauptgenres',[['shooter','Shooter'],['strategy','Strategie'],['rpg','RPG'],['racing','Rennspiel'],['survival','Survival'],['building','Aufbau'],['sport','Sport'],['party','Party'],['adventure','Abenteuer']]]
  ],
  mechanics:[
+  ['Perspektive & Spielweise',[['fps','Ego-Shooter (FPS)'],['tps','Third-Person-Shooter'],['rts','Echtzeitstrategie (RTS)'],['simulation','Simulation']]],
   ['Kampf & Fortschritt',[['extraction','Extraction'],['loot','Looten'],['hordes','Hordenkämpfe'],['battle-royale','Battle Royale'],['roguelite','Roguelite'],['hack-slash','Hack & Slash'],['tactical','Taktik'],['stealth','Schleichen']]],
   ['Bauen & Erkunden',[['crafting','Crafting'],['basebuilding','Basisbau'],['factory','Fabrikbau'],['tower-defense','Tower Defense'],['building','Bauen'],['management','Ressourcenmanagement'],['exploration','Erkundung'],['open-world','Open World'],['sandbox','Sandbox'],['vehicles','Fahrzeuge'],['platforming','Geschicklichkeit'],['puzzle-solving','Rätsel lösen']]]
  ],
@@ -124,7 +123,7 @@ export function matchTaxonomy(actual,selected,operator='any'){
 }
 const taxonomyLabel=g=>{
  const arr=taxonomyFor(g,'genres');
- const labels=arr.filter(x=>!(x==='shooter'&&(arr.includes('fps')||arr.includes('tps')))&&!(x==='strategy'&&arr.includes('rts')));
+ const labels=arr.filter(x=>['shooter','strategy','rpg','racing','survival','building','sport','party','adventure'].includes(x));
  return labels.slice(0,2).map(taxonomyName).join(' · ')||g.genre||'Genre noch offen';
 };
 const emptyClassification=()=>({genres:[],mechanics:[],themes:[]});
@@ -265,7 +264,7 @@ function add(){return pageShell(`<main class="detail"><button class="back" data-
 function membersPage(){return pageShell(`<main><div class="intro"><h1>Mitglieder</h1><p>Private Gruppe · ${members().length} Mitglieder</p></div><div class="panel"><h2>Eure Gruppe</h2>${members().map(m=>`<button class="member-link" data-action="open-profile" data-id="${m.user_id}">${avatar(m.profile,'medium')}<span><strong>${esc(m.profile?.display_name||'Mitglied')}</strong><small>${esc(m.profile?.initials)} · ${m.role==='admin'?'Administrator':'Mitglied'}</small></span><b>›</b></button>`).join('')}</div>${st.data.role==='admin'?`<div class="panel"><h2>Mitglied einladen</h2><p class="hint">Einladungscode 7 Tage gültig, maximal 3 Verwendungen. Nur eingeloggte Benutzer können beitreten.</p><button class="btn primary full" data-action="invite">Einladungslink erstellen</button><div id="invite-result"></div></div>`:''}<div class="panel"><h2>Mein Konto</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function profilePage(){const profile=st.data.profiles.find(p=>p.user_id===st.profileId);if(!profile){st.screen='members';return membersPage()}const its=st.data.ownership.filter(o=>o.user_id===st.profileId&&o.status==='yes').map(o=>st.data.games.find(g=>g.id===o.game_id)).filter(Boolean);const my=st.data.ownership.filter(o=>o.user_id===st.data.userId&&o.status==='yes').map(o=>o.game_id);const overlap=its.filter(g=>my.includes(g.id));const ratings=st.data.ratings.filter(r=>r.user_id===st.profileId);const mine=st.profileId===st.data.userId;
  return pageShell(`<main class="detail"><button class="back" data-action="go" data-screen="members">‹ Zurück zu Mitglieder</button><div class="profile-head">${avatar(profile,'large')}<div><h1>${esc(profile.display_name)}</h1><span class="tag">${esc(profile.initials)}</span></div></div>${hardwarePanel(profile.user_id,mine)}${mine?`<div class="panel"><h2>Mein Profil bearbeiten</h2><form id="profile-form"><label>Name<input name="displayName" value="${esc(profile.display_name)}" minlength="2" maxlength="60" required></label><label>Kürzel<input name="initials" value="${esc(profile.initials)}" maxlength="3" required></label><button type="submit" class="btn ghost full">Änderungen speichern</button></form><form id="avatar-form"><label>Profilbild auswählen<input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required></label><button class="btn ghost full" type="submit">Profilbild hochladen</button></form></div>`:''}<div class="panel"><h2>Spiele von ${esc(profile.initials)} <span class="muted">(${its.length})</span></h2>${its.length?`<div class="tile-grid">${its.slice(0,16).map(g=>`<button class="tile" data-action="open-game" data-id="${g.id}">${cover(g)}<strong>${esc(g.title)}</strong></button>`).join('')}</div>`:`<p class="hint">Noch keine bestätigten Besitztitel.</p>`}</div>${!mine?`<div class="panel"><h2>Gemeinsam mit mir (${overlap.length})</h2><p class="hint">Besitz-Schnittmenge, keine automatische Garantie für Crossplay.</p>${overlap.map(g=>`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} ›</button>`).join('')||'<p class="hint">Noch keine bestätigte Überschneidung.</p>'}</div>`:''}<div class="panel"><h2>Bewertungen (${ratings.length})</h2>${ratings.length?ratings.map(r=>{const g=st.data.games.find(g=>g.id===r.game_id);return g?`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} <strong>${r.rating}/10</strong></button>`:''}).join(''):'<p class="hint">Noch keine Bewertungen.</p>'}</div></main>`)}
-function settingsPage(){return pageShell(`<main class="detail"><h1>Einstellungen</h1><div class="panel"><h2>Mein Konto</h2><p class="hint">Profilbild, Anzeigename und Kürzel bearbeiten.</p><button class="btn primary full" data-action="open-profile" data-id="${st.data.userId}">Mein Profil bearbeiten</button></div><div class="panel"><h2>Mitglieder</h2><button class="btn ghost full" data-action="go" data-screen="members">Gruppenmitglieder ansehen</button></div><div class="panel"><h2>Steam-Preise & Bewertungen</h2><p class="hint">Steam-Wertungen werden als positive Stimmen in Prozent und Preise als aktuelle Momentaufnahme gespeichert. Beide Daten werden automatisch abgeglichen. Spiele außerhalb von Steam haben möglicherweise keine Wertung.</p>${st.data.role==='admin'?`<button class="btn ghost full" data-action="sync-reviews">Steam-Preise und Bewertungen aktualisieren</button>`:''}</div><div class="panel"><h2>Anmeldung</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
+function settingsPage(){return pageShell(`<main class="detail"><h1>Einstellungen</h1><div class="panel"><h2>Mein Konto</h2><p class="hint">Profilbild, Anzeigename und Kürzel bearbeiten.</p><button class="btn primary full" data-action="open-profile" data-id="${st.data.userId}">Mein Profil bearbeiten</button></div><div class="panel"><h2>Mitglieder</h2><button class="btn ghost full" data-action="go" data-screen="members">Gruppenmitglieder ansehen</button></div><div class="panel"><h2>Steam-Preise & Bewertungen</h2><p class="hint">Steam-Wertungen werden als positive Stimmen in Prozent und Preise als aktuelle Momentaufnahme gespeichert. Beide Daten werden automatisch abgeglichen. Spiele außerhalb von Steam haben möglicherweise keine Wertung.</p>${st.data.role==='admin'?`<button class="btn ghost full" data-action="sync-reviews">Steam-Preise und Bewertungen aktualisieren</button>${st.steamLastResult?`<p class=\"hint\" style=\"overflow-wrap:anywhere\">${esc(st.steamLastResult)}</p>`:''}`:''}</div><div class="panel"><h2>Anmeldung</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function hardwarePanel(userId,mine){
  const h=(st.data.hardware||[]).find(x=>x.user_id===userId);
  const val=(name)=>esc(h?.[name]??'');
@@ -310,19 +309,19 @@ let reviewSyncRunning=false;
 async function syncSteamReviews(manual=false){
  if(DEMO||!st.data||st.data.role!=='admin'||reviewSyncRunning)return;
  reviewSyncRunning=true;
- let successes=0,attempted=0,errors=0;
+ let successes=0,attempted=0,errors=0;const errorDetails=[];
  try{
   for(let pass=0;pass<8;pass++){
    if(document.hidden && !manual)break;
    const result=await repo.syncSteamReviews();
    const changed=result.updated||[];
-   attempted+=(result.processed||0);successes+=changed.filter(x=>x.score!=null||x.priceEUR!=null).length;errors+=(result.failed||[]).length;
+   attempted+=(result.processed||0);successes+=changed.filter(x=>x.score!=null||x.priceEUR!=null).length;errors+=(result.failed||[]).length;for(const e of result.failed||[]){if(errorDetails.length<4&&!errorDetails.includes(e.error||''))errorDetails.push(e.error||'Unbekannter Datenfehler');}
    for(const r of changed){const g=st.data?.games.find(g=>g.id===r.id);if(g){if(r.score!==undefined)g.steam_positive_percent=r.score;if(r.priceEUR!==undefined && r.priceEUR!==null)g.price_eur=r.priceEUR;}}
    if(changed.length && ['catalog','detail'].includes(st.screen) && !document.querySelector('input:focus,textarea:focus'))render();
    if(!result.remainingPossible||!changed.length)break;
    await new Promise(ok=>setTimeout(ok,1200));
   }
-  if(manual)showToast(successes?`${successes} Steam-Datensätze aktualisiert${errors?' · '+errors+' Fehler':''}.`:errors?`${errors} Steam-Abfragen fehlgeschlagen. Erneut versuchen.`:'Keine neuen Preise oder Bewertungen verfügbar.');
+  if(manual){st.steamLastResult=`${successes} Daten aktualisiert · ${errors} Fehler · ${attempted} Spiele geprüft. ${errorDetails.length?errorDetails.join(' | '):''}`;render();showToast(successes?`${successes} Steam-Daten aktualisiert.`:errors?`Steam-Fehler: ${errorDetails[0]||'Details unter Einstellungen'}`:'Keine neuen Preise oder Bewertungen verfügbar.');}
  }catch(e){if(manual)showToast('Steam-Synchronisierung fehlgeschlagen: '+e.message)}
  finally{reviewSyncRunning=false}
 }
