@@ -696,3 +696,50 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
  .detail-v18 .detail-rating-scale .rate{height:42px;min-height:42px;font-size:13px;border-radius:7px}
  .detail-v18 .detail-action-tile{font-size:11px}
 }
+
+
+/* v1.9 — minimal reset, faithful Steam branding, clearer topics and quieter release teaser */
+.catalog-page .searchline{display:flex;align-items:stretch;gap:7px;min-width:0}
+.catalog-page .searchline>.search{flex:1;min-width:0;width:auto}
+.catalog-reset-quiet{display:grid;place-items:center;flex:0 0 43px;min-width:43px;padding:0;border:1px solid #4f7a887a;border-radius:15px;background:linear-gradient(145deg,#132c3d,#101e2d);color:#8eb1bd;opacity:.35;cursor:default;box-shadow:inset 0 1px #ffffff0e}
+.catalog-reset-quiet.active{color:#87f4e9;border-color:#449b9d95;opacity:.85;cursor:pointer;transition:opacity .15s,border-color .15s}
+.catalog-reset-quiet.active:hover{opacity:1;border-color:#6ce5e1;box-shadow:0 0 13px #24cbb02b}
+.catalog-reset-quiet svg{width:22px;height:22px}
+.catalog-reset-quiet:focus-visible{outline:2px solid #62dfdf;outline-offset:2px}
+.game-card .game-image{margin:7px 0 7px 7px;border:1px solid rgba(110,214,224,.58);border-radius:clamp(12px,2vw,23px);box-shadow:0 8px 18px #000a,0 0 0 2px #73fcfa18,0 0 14px #3dced827}
+.game-card .game-image:after{border-radius:inherit;border:1px solid #8ce9f52b}
+.game-card:hover .game-image{border-color:#88e7e5;box-shadow:0 9px 21px #000b,0 0 16px #51e2ee4f}
+.steam-logo-mark,.steam-card-logo,.steam-list-logo{display:inline-block;fill:currentColor;vertical-align:middle}
+.rating-icon.steam-rating-icon{display:grid;place-items:center}
+.rating-icon .steam-card-logo{width:27px;height:27px;max-width:85%;max-height:85%}
+.game-ratings .rating-group small{font-size:clamp(9px,1.05vw,12px);letter-spacing:.04em}
+.list-steam-score{display:inline-flex;align-items:center;gap:5px;justify-content:center}
+.list-steam-logo{width:16px;height:16px;flex:none;color:#a5e9e4}
+.detail-v18 .steam-mark{width:37px;height:37px;filter:drop-shadow(0 0 4px #9deaff30)}
+.detail-v17-hero .detail-v17-hero-tags{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:100%}
+.detail-topic-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;border:1px solid rgba(140,211,223,.46);background:#122e42b8;color:#d6eef1;font-size:clamp(10px,1.5vw,12px);font-weight:700;line-height:1.1;white-space:normal}
+.detail-topic-chip.major{background:#195669db;color:#9bf5e9;border-color:#40c7bf87}
+.release-spotlight{padding:9px 14px;min-height:0;margin:8px 0 13px;gap:9px;border-radius:14px;border-color:#3b74886e;background:linear-gradient(110deg,#102939a8,#102639d0);box-shadow:none}
+.release-spotlight-heading{gap:8px}
+.release-spotlight .release-radar-icon{font-size:19px;width:29px;height:29px;flex:none;opacity:.68}
+.release-spotlight small{font-size:9px;letter-spacing:.08em;color:#84b9b9}
+.release-spotlight h2{font-size:15px;letter-spacing:0;margin:0 0 2px}
+.release-spotlight p{font-size:11px;color:#9cb9c4;margin:0}
+.release-spotlight-go{font-size:12px;padding:7px 10px;border-radius:9px;min-height:35px;color:#b5ebe8;border-color:#3a85918a;background:#163d4a8c;white-space:nowrap}
+@media(max-width:480px){
+ .catalog-reset-quiet{flex-basis:34px;min-width:34px;border-radius:12px}.catalog-reset-quiet svg{width:19px;height:19px}
+ .game-card .game-image{margin:5px 0 5px 5px;border-radius:15px}
+ .rating-icon .steam-card-logo{width:20px;height:20px}
+ .release-spotlight{flex-direction:row;align-items:center;padding:8px 10px;gap:6px}
+ .release-spotlight-heading{align-items:center;min-width:0;flex:1}
+ .release-spotlight .release-radar-icon{font-size:18px;width:26px;height:26px}
+ .release-spotlight h2{font-size:13px;line-height:1.2}
+ .release-spotlight small{font-size:8px}.release-spotlight p{display:none}
+ .release-spotlight-go{width:auto;flex:none;min-height:32px;text-align:center;padding:6px 8px;font-size:11px}
+ .detail-topic-chip{font-size:10px;padding:4px 7px}
+}
+/* v1.9: full group-rating caption at narrow card widths */
+.game-card .rating-group .rating-copy{min-width:0;max-width:100%}
+.game-card .rating-group .rating-copy small{white-space:normal;overflow-wrap:normal;line-height:1.08;max-width:100%}
+@media(max-width:600px){.game-card .rating-group .rating-copy small{font-size:8px;letter-spacing:0}}
+@media(max-width:370px){.game-card .rating-group .rating-copy small{font-size:7px}}

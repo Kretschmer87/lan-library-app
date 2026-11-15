@@ -1,6 +1,6 @@
-import {CloudRepository} from './repository.mjs?v=1.8.0';
-import {DemoRepository} from './demo.mjs?v=1.8.0';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.8.0';
+import {CloudRepository} from './repository.mjs?v=1.9.0';
+import {DemoRepository} from './demo.mjs?v=1.9.0';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.0';
 
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
@@ -94,7 +94,7 @@ function releaseSpotlight(){
  const coming=upcomingGames(),recent=freshlyReleased();
  if(!coming.length&&!recent.length)return '';
  const focus=coming[0],watched=coming.filter(releaseWatched).length;
- return `<section class="release-spotlight"><div class="release-spotlight-heading"><span class="release-radar-icon">◷</span><div><small>RELEASE RADAR</small><h2>Demnächst ${coming.length?`· ${coming.length} Spiele`:''}</h2><p>${watched?`${watched} von dir vorgemerkt · `:''}${focus?`Nächster bekannter Zeitraum: ${esc(focus.title)} · ${esc(releaseDateText(focus))}`:'Neue Spiele sind erschienen'}</p></div></div><button class="release-spotlight-go" data-action="go" data-screen="upcoming">Release-Liste ansehen ›</button></section>`;
+ return `<section class="release-spotlight"><div class="release-spotlight-heading"><span class="release-radar-icon">◷</span><div><small>RELEASE-RADAR</small><h2>${coming.length} angekündigte Spiele${watched?` · ${watched} vorgemerkt`:''}</h2><p>${focus?`${esc(focus.title)} · ${esc(releaseDateText(focus))}`:'Neue Spiele erschienen'}</p></div></div><button class="release-spotlight-go" data-action="go" data-screen="upcoming">Ansehen ›</button></section>`;
 }
 function releaseRadarRow(g){
  const watching=releaseWatched(g),fav=myFav(g),date=exactReleaseDate(g),days=daysToRelease(g);
@@ -366,8 +366,8 @@ function gameCard(g){
     <div class="card-title-line"><h3>${esc(g.title)}</h3><button class="card-heart ${fav?'on':''}" data-action="fav-card" data-id="${g.id}" aria-label="${fav?'Von der LAN-Liste entfernen':'Für die LAN vormerken'}" title="${fav?'Vormerkung entfernen':'Für die LAN vormerken'}">${fav?'♥':'♡'}</button></div>
     <div class="game-tags">${saleBadge(g)}${releaseTag(g)}<span class="tag genre">${esc(taxonomyLabel(g))}</span><span class="tag mode">${esc(mode)}</span><span class="tag ${warn?'warn':'ok'}">${warn?'!':'✓'} ${suitability}</span><span class="tag player-tag">${glyph('people')} ${max>0?'1–'+max:'?'} Spieler</span></div>
     <div class="game-ratings">
-     <span class="rating-steam"><span class="rating-icon">S</span><span class="rating-copy"><small>STEAM</small><b class="${steam===null?'empty-rating':''}">${steam===null?'–':steam+' %'}</b></span></span>
-     <span class="rating-group"><span class="rating-icon rating-people">${glyph('people')}</span><span class="rating-copy"><small>GRUPPE</small><b class="${group===null?'empty-rating':''}">${group===null?'–':group.toFixed(1).replace('.',',')}${group===null?'':'<em>/10</em>'}</b></span><span class="rating-star" aria-hidden="true">★</span></span>
+     <span class="rating-steam"><span class="rating-icon steam-rating-icon">${steamMark('steam-card-logo')}</span><span class="rating-copy"><small>STEAM</small><b class="${steam===null?'empty-rating':''}">${steam===null?'–':steam+' %'}</b></span></span>
+     <span class="rating-group"><span class="rating-icon rating-people">${glyph('people')}</span><span class="rating-copy"><small>UNSERE WERTUNG</small><b class="${group===null?'empty-rating':''}">${group===null?'–':group.toFixed(1).replace('.',',')}${group===null?'':'<em>/10</em>'}</b></span><span class="rating-star" aria-hidden="true">★</span></span>
     </div>
     <div class="game-bottomline"><div class="owner-line" aria-label="Besitzstatus in eurer Gruppe">${owners.map(m=>{const status=owner(g.id,m.user_id)?.status||'unknown';return `<span class="owner-person" title="${esc(m.profile?.display_name||'Mitglied')}: ${status==='yes'?'Besitzt':status==='no'?'Besitzt nicht':'Besitz offen'}"><span class="owner-tile ${status}">${avatar(m.profile)}<i class="state ${status}">${status==='yes'?'✓':status==='no'?'×':'?'}</i></span><span class="owner-initials">${esc(m.profile?.initials||'?')}</span></span>`}).join('')}</div><span class="owners-count" aria-label="${ownedCount(g)} von ${owners.length} besitzen dieses Spiel">${ownedCount(g)} / ${owners.length}</span>${playWishCount(g.id)?`<span class="wish-amount" title="${playWishCount(g.id)} von ${owners.length} möchten dieses Spiel spielen">✦ ${playWishCount(g.id)}</span>`:''}${scKnown?`<span class="lan-score-tag" title="${sc.provisional?'Vorläufiger ':''}LAN-Score ${sc.score}">${sc.score}${sc.provisional?'*':''}</span>`:''}</div>
    </div>
@@ -379,23 +379,24 @@ function listRow(g){const fav=isOnLanList(g.id),sc=scoreFor(g),gr=avg(g),max=Mat
  const gt=taxonomyLabel(g);
  return `<article class="game-list-row" role="button" tabindex="0" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
  <div class="list-cover">${cover(g,'hero')}</div><div class="list-main"><strong class="list-title">${esc(g.title)}</strong>${saleBadge(g)}${releaseTag(g)}<span class="list-sub">${esc(gt||g.genre||'Genre offen')} · ${max||'?'} Spieler</span>${matches.total&&matches.missing.length?`<span class="list-mismatch">${esc(matches.missing[0])}</span>`:''}</div>
- <div class="list-metrics"><span title="Steam-Bewertung">S <b>${g.steam_positive_percent==null?'–':g.steam_positive_percent+' %'}</b></span><span title="Gruppenwertung">★ <b>${gr==null?'–':gr.toFixed(1).replace('.',',')+'/10'}</b></span></div>
+ <div class="list-metrics"><span title="Steam-Bewertung" class="list-steam-score">${steamMark('steam-list-logo')} <b>${g.steam_positive_percent==null?'–':g.steam_positive_percent+' %'}</b></span><span title="Unsere Wertung">★ <b>${gr==null?'–':gr.toFixed(1).replace('.',',')+'/10'}</b></span></div>
  <div class="list-ownership" title="Besitz in eurer Gruppe">${ownedCount(g)}/${groupMembers().length} <small>Besitz</small></div>
  <div class="list-lan">${sc.score!=null?`<b>${sc.score}${sc.provisional?'*':''}</b><small>LAN</small>`:'<small>LAN-Score<br>offen</small>'}</div>
  <button class="list-heart ${fav?'on':''}" data-action="fav-card" data-id="${g.id}" title="Für die LAN vormerken" aria-label="${fav?'Vormerkung entfernen':'Für die LAN vormerken'}">${fav?'♥':'♡'}</button></article>`;
 }
 
 function sortMenu(){
- const values=[['name','Alphabet'],['score','LAN-Score'],['group','Gruppenwertung'],['steam','Steam-Wertung'],['price','Preis'],['owners','Besitz'],['sales','Steam-Angebote'],['release','Demnächst erscheinend']];
+ const values=[['name','Alphabet'],['score','LAN-Score'],['group','Unsere Wertung'],['steam','Steam-Wertung'],['price','Preis'],['owners','Besitz'],['sales','Steam-Angebote'],['release','Demnächst erscheinend']];
  return `<div class="sort-pop"><strong class="sort-menu-heading">Sortieren nach</strong>${values.map(([v,label])=>`<button data-action="sort" data-value="${v}" class="${st.sort===v?'on':''}">${label}${st.sort===v?' ✓':''}</button>`).join('')}<div class="sort-menu-heading">Reihenfolge</div><div class="sort-order-row"><button data-action="set-sort-direction" data-value="asc" class="${!st.desc?'on':''}">↑ Aufsteigend</button><button data-action="set-sort-direction" data-value="desc" class="${st.desc?'on':''}">↓ Absteigend</button></div></div>`;
 }
 function catalog(){
  const gs=displayGames(),f=st.filters,count=activeFilterCount(f);
  const full=gs.length;
+ const canReset=!!(st.search.trim()||st.sort!=='name'||st.desc||st.saleOnly||count||st.viewMode!=='rich'||st.filtersOpen);
  return pageShell(`<main class="catalog-page">
   <section class="catalog-controls">
-   <div class="searchline"><div class="search">${glyph('search')}<input id="search" type="search" value="${esc(st.search)}" placeholder="Spiele durchsuchen …" autocomplete="off" aria-label="Spiele durchsuchen"></div></div>
-   <div class="bar catalog-action-grid"><div class="sort-box"><button class="menu-btn" data-action="toggle-sort" aria-label="Sortieren: ${{name:'Alphabet',score:'LAN-Score',group:'Gruppenwertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',sales:'Angebote',release:'Nächster Release'}[st.sort]}">${glyph('arrow')} <span>${st.desc?'↓':'↑'} ${{name:'Alphabet',score:'LAN-Score',group:'Gruppenwertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',sales:'Angebote',release:'Nächster Release'}[st.sort]}</span> <b>⌄</b></button>${st.menu==='sort'?sortMenu():''}</div><button class="menu-btn sale-filter ${st.saleOnly?'selected':''}" data-action="toggle-sales" aria-label="Nur rabattierte Spiele anzeigen"><b class="sale-control-mark" aria-hidden="true">%</b><span>Angebote</span><span class="pill">${salesForMe().length}</span></button><button class="menu-btn filter-btn ${st.filtersOpen?'selected':''}" data-action="toggle-filters" aria-label="Spiele filtern">${glyph('filter')} <span>Filter</span><span class="pill">${count}</span></button></div>
+   <div class="searchline"><div class="search">${glyph('search')}<input id="search" type="search" value="${esc(st.search)}" placeholder="Spiele durchsuchen …" autocomplete="off" aria-label="Spiele durchsuchen"></div><button type="button" class="catalog-reset-quiet ${canReset?'active':''}" data-action="reset-catalog" aria-label="Standardansicht wiederherstellen: Suche, Filter, Sortierung und Angebote zurücksetzen" title="Standardansicht wiederherstellen" ${canReset?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.8 6.5"/><path d="M3 4v7h7"/></svg></button></div>
+   <div class="bar catalog-action-grid"><div class="sort-box"><button class="menu-btn" data-action="toggle-sort" aria-label="Sortieren: ${{name:'Alphabet',score:'LAN-Score',group:'Unsere Wertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',sales:'Angebote',release:'Nächster Release'}[st.sort]}">${glyph('arrow')} <span>${st.desc?'↓':'↑'} ${{name:'Alphabet',score:'LAN-Score',group:'Unsere Wertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',sales:'Angebote',release:'Nächster Release'}[st.sort]}</span> <b>⌄</b></button>${st.menu==='sort'?sortMenu():''}</div><button class="menu-btn filter-btn ${st.filtersOpen?'selected':''}" data-action="toggle-filters" aria-label="Spiele filtern">${glyph('filter')} <span>Filter</span><span class="pill">${count}</span></button><button class="menu-btn sale-filter ${st.saleOnly?'selected':''}" data-action="toggle-sales" aria-label="Nur rabattierte Spiele anzeigen"><b class="sale-control-mark" aria-hidden="true">%</b><span>Angebote</span><span class="pill">${salesForMe().length}</span></button></div>
   ${st.filtersOpen?`<div class="filter-panel"><h2>Filter <button class="close-btn" data-action="toggle-filters" aria-label="Filter schließen">×</button></h2><p>Alle Kriterien zuerst. Ähnliche Spiele folgen nach Anzahl erfüllter Wünsche. Preis, Besitz und Hardware bleiben verbindlich.</p>${multiOpts('Genre / Spieltyp','genres',TAXONOMY_GROUPS.genres,'Was für eine Art Spiel ist es? Beispiele: Shooter, RPG, Strategie.')}${multiOpts('Vorlieben / Tags','mechanics',TAXONOMY_GROUPS.mechanics,'Zusätzliche Eigenschaften: z. B. Zombies, Survival oder Tower Defense.')}${multiOpts('Multiplayer','modes',[['Spielmodi & Lobby',MODE_FILTERS]],'Welche Art gemeinsames Spiel ist möglich?')}${opts('Anzahl Besitzer','owned',[['','Egal'],['1','Mindestens einer'],['2','Mindestens zwei'],['all','Alle']])}${opts('Preisgrenze','maxPrice',[['','Egal'],['0','Kostenlos'],['10','Bis 10 €'],['20','Bis 20 €'],['30','Bis 30 €'],['40','Bis 40 €']])}${opts('Hardware-Anforderung','maxHardware',[['','Alle'],['2','Niedrig · einfache PCs'],['3','Mittel · Gaming-PC'],['4','Hoch · leistungsstarker PC']])}${opts('LAN-Score','minScore',[['','Egal'],['60','Ab 60'],['70','Ab 70'],['80','Ab 80'],['90','Ab 90']])}<p class="filter-help">Hardware: nur ein vorläufiges Bedarfsniveau, keine FPS-Prognose. Nicht bewertete Spiele werden als unbekannt angezeigt.</p><label class="check-row"><input type="checkbox" data-filter-check="trio" ${f.trio?'checked':''}> Für drei gemeinsam geeignet</label><div class="row gap"><button class="btn ghost" data-action="reset-filters">Zurücksetzen</button><button class="btn primary" data-action="toggle-filters">Treffer anzeigen</button></div></div>`:''}
   </section>
   ${releaseNotice()}${saleNotice()}${st.saleOnly?`<div class="sales-heading"><strong>Steam-Angebote für dich</strong><button class="text-btn" data-action="toggle-sales">Alle Spiele anzeigen ×</button></div>`:''}${!st.search&&!count&&!st.saleOnly?releaseSpotlight():''}
@@ -415,9 +416,22 @@ function catalog(){
 }
 
 function gameById(){return st.data.games.find(g=>g.id===st.gameId)}
+// Steam trademark symbol: authentic Simple Icons SVG (simple-icons/simple-icons/icons/steam.svg).
+function steamMark(cssClass='steam-logo-mark'){return `<svg class="${cssClass}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M11.979 0C5.678 0 .511 4.86.022 11.037l6.432 2.658c.545-.371 1.203-.59 1.912-.59.063 0 .125.004.188.006l2.861-4.142V8.91c0-2.495 2.028-4.524 4.524-4.524 2.494 0 4.524 2.031 4.524 4.527s-2.03 4.525-4.524 4.525h-.105l-4.076 2.911c0 .052.004.105.004.159 0 1.875-1.515 3.396-3.39 3.396-1.635 0-3.016-1.173-3.331-2.727L.436 15.27C1.862 20.307 6.486 24 11.979 24c6.627 0 11.999-5.373 11.999-12S18.605 0 11.979 0zM7.54 18.21l-1.473-.61c.262.543.714.999 1.314 1.25 1.297.539 2.793-.076 3.332-1.375.263-.63.264-1.319.005-1.949s-.75-1.121-1.377-1.383c-.624-.26-1.29-.249-1.878-.03l1.523.63c.956.4 1.409 1.5 1.009 2.455-.397.957-1.497 1.41-2.454 1.012H7.54zm11.415-9.303c0-1.662-1.353-3.015-3.015-3.015-1.665 0-3.015 1.353-3.015 3.015 0 1.665 1.35 3.015 3.015 3.015 1.663 0 3.015-1.35 3.015-3.015zm-5.273-.005c0-1.252 1.013-2.266 2.265-2.266 1.249 0 2.266 1.014 2.266 2.266 0 1.251-1.017 2.265-2.266 2.265-1.253 0-2.265-1.014-2.265-2.265z"/></svg>`;}
+const detailThemeLabels={space:'Weltraum','sci-fi':'Science-Fiction',dinosaurs:'Dinosaurier',fantasy:'Fantasy',medieval:'Mittelalter',military:'Militär',postapocalyptic:'Postapokalypse',horror:'Horror',zombies:'Zombies'};
+function detailTags(g){
+ const genres=taxonomyFor(g,'genres'),mech=taxonomyFor(g,'mechanics'),themes=taxonomyFor(g,'themes');
+ const preference=['survival','basebuilding','crafting','open-world','exploration','extraction','roguelite','tower-defense','loot','sandbox','zombies','horror'];
+ const sorted=[...new Set(mech)].sort((a,b)=>{
+   const aPos=preference.indexOf(a),bPos=preference.indexOf(b);
+   return (aPos<0?99:aPos)-(bPos<0?99:bPos);
+ });
+ const values=[...genres.slice(0,1).map(taxonomyName),...sorted.slice(0,3).map(tag=>tag==='basebuilding'?'Basenbau':taxonomyName(tag)),...themes.slice(0,2).map(tag=>detailThemeLabels[tag]||taxonomyName(tag))];
+ const seen=new Set();return values.filter(x=>{const key=x.toLocaleLowerCase('de');if(seen.has(key))return false;seen.add(key);return true}).slice(0,6).map((label,i)=>`<span class="detail-topic-chip ${i?'':'major'}">${esc(label)}</span>`).join('');
+}
 function detailActionIcon(kind){
  if(kind==='youtube')return `<svg class="detail-brand-svg youtube-mark" viewBox="0 0 48 48" aria-hidden="true"><rect x="2" y="8" width="44" height="32" rx="10" fill="#fa2647"/><path d="m20 16 14 8-14 8z" fill="#fff"/></svg>`;
- if(kind==='steam')return `<svg class="detail-brand-svg steam-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="32" cy="15" r="10.5" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="32" cy="15" r="5.5" fill="currentColor"/><path d="M9 32 20 36 29 24" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="36" r="8" fill="none" stroke="currentColor" stroke-width="3"/><path d="m3 32 11 5" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg>`;
+ if(kind==='steam')return steamMark('detail-brand-svg steam-mark');
  if(kind==='heart')return `<svg class="detail-brand-svg heart-mark" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 41 8 26C-1 17 7 4 17 9c3 1 5 3 7 6 2-3 4-5 7-6 10-5 18 8 9 17Z" fill="currentColor"/></svg>`;
  return '';
 }
@@ -426,7 +440,8 @@ function detail(){
  const fit=fitFor(g),score=scoreFor(g),myRate=rating(g.id,st.data.userId),fav=isOnLanList(g.id);
  const isAdmin=st.data.role==='admin',eligible=fit.score>=.8,notes=st.data.notes.filter(n=>n.game_id===g.id);
  const privateCoop=(g.modes||[]).some(m=>m.type==='coop_pve'&&m.privateSession===true&&Number(m.sameTeamMax||0)>=3);
- const lobbyText=privateCoop?'Private Koop-LAN für drei bestätigt':(g.modes||[]).some(m=>m.type==='coop_pve'&&Number(m.sameTeamMax||0)>=3)?'3er-Koop möglich · private Lobby prüfen':fit.explanation;
+ const privateTeam=(g.modes||[]).some(m=>m.type==='team_pvp'&&m.privateSession===true&&Number(m.sameTeamMax||0)>=3);
+ const lobbyText=privateCoop?'Private Koop-LAN für drei bestätigt':privateTeam?'3er-Team im privaten LAN-Modus bestätigt':(g.modes||[]).some(m=>m.type==='coop_pve'&&Number(m.sameTeamMax||0)>=3)?'3er-Koop möglich · private Lobby unbestätigt':fit.explanation;
  const owned=confirmedOwner(g.id,st.data.userId),sale=saleInfo(g);
  const tab=st.detailTab||'overview',tabs=[['overview','Spiel'],['group','Unsere LAN'],['more','Mehr']];
  const total=groupMembers().length;
@@ -444,7 +459,7 @@ function detail(){
  <div class="detail-experience">
    <div class="detail-overline">SPIELÜBERSICHT</div><h2>Auf einen Blick</h2>
    <p class="detail-description">${esc(g.description||'Für dieses Spiel ist noch keine Beschreibung hinterlegt. Gameplay findest du über das YouTube-Symbol oben.')}</p>
-   <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':eligible?'✓ Zu dritt spielbar':'! Multiplayer-Konfiguration prüfen'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${g.hardware_tier?`<span class="detail-feature">Hardware ${g.hardware_tier}/5</span>`:''}</div>
+   <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':privateTeam?'✓ 3er-Team in eigener LAN-Partie':eligible?'✓ Zu dritt spielbar':'! Gruppenspiel prüfen: Lobby/Teamgröße unklar'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${g.hardware_tier?`<span class="detail-feature">Hardware ${g.hardware_tier}/5</span>`:''}</div>
 
  </div>
  ${sale?`<div class="detail-sale-panel"><div><strong>${sale.off}% Rabatt bei Steam</strong><span>${euro(sale.old)} regulär · ${euro(sale.now)} aktuell</span></div>${steamLink}</div>`:''}
@@ -455,7 +470,7 @@ function detail(){
  const group=`<section class="detail-tab-content" id="detail-panel-group">
  <div class="detail-group-head"><span class="detail-overline">UNSERE LAN</span><h2>Die Gruppe</h2><p>Besitz und Bewertungen eurer Spieler.</p></div>
  <div class="detail-interest detail-interest-summary"><strong>♥ ${playWishCount(g.id)} von ${total} Mitgliedern haben das Spiel für die LAN vorgemerkt.</strong></div>
- <div class="detail-owner-list"><div class="detail-section-header"><h3>Spielbesitz</h3><strong>${ownedCount(g)} / ${total}</strong></div>${members().map(m=>{const own=owner(g.id,m.user_id),editable=isAdmin||m.user_id===st.data.userId;const v=own?.status||'unknown';return `<div class="detail-owner-entry">${avatar(m.profile,'medium')}<div class="detail-owner-person"><strong>${esc(m.profile?.display_name||'Mitglied')}</strong><small>${v==='yes'?'✓ Besitzt · '+esc((own.launchers||[]).join(' + ')):v==='no'?'Nicht im Besitz':'Besitz noch offen'}</small></div>${editable?`<button class="owner-pick" data-action="toggle-owner" data-user="${m.user_id}">${v==='yes'?'✓':v==='no'?'×':'?'} Ändern ⌄</button>`:''}</div>${st.menu==='owner:'+m.user_id?`<div class="choice-list inline-owner">${[['unknown','Unbekannt'],['no','Besitzt nicht'],['Steam','Steam'],['Epic','Epic Games'],['Steam + Epic','Steam + Epic'],['Battle.net','Battle.net'],['GOG','GOG'],['Offline','Ohne Launcher']].map(([v,text])=>`<button class="choice-item" data-action="save-owner" data-user="${m.user_id}" data-value="${v}">${text}</button>`).join('')}</div>`:''}`}).join('')}</div>
+ <div class="detail-owner-list"><div class="detail-section-header"><h3>Spielbesitz</h3><strong>${ownedCount(g)} / ${total}</strong></div>${members().map(m=>{const own=owner(g.id,m.user_id),editable=isAdmin||m.user_id===st.data.userId;const v=own?.status||'unknown';return `<div class="detail-owner-entry">${avatar(m.profile,'medium')}<div class="detail-owner-person"><strong>${esc(m.profile?.display_name||'Mitglied')}</strong><small>${g.group_shared_access?'✓ Für die Gruppe bereitgestellt':v==='yes'?'✓ Besitzt · '+esc((own.launchers||[]).join(' + ')):v==='no'?'Nicht im Besitz':'Besitz noch offen'}</small></div>${editable&&!g.group_shared_access?`<button class="owner-pick" data-action="toggle-owner" data-user="${m.user_id}">${v==='yes'?'✓':v==='no'?'×':'?'} Ändern ⌄</button>`:''}</div>${st.menu==='owner:'+m.user_id?`<div class="choice-list inline-owner">${[['unknown','Unbekannt'],['no','Besitzt nicht'],['Steam','Steam'],['Epic','Epic Games'],['Steam + Epic','Steam + Epic'],['Battle.net','Battle.net'],['GOG','GOG'],['Offline','Ohne Launcher']].map(([v,text])=>`<button class="choice-item" data-action="save-owner" data-user="${m.user_id}" data-value="${v}">${text}</button>`).join('')}</div>`:''}`}).join('')}</div>
  <div class="detail-rating-box"><div class="detail-section-header"><h3>Eure Bewertungen</h3><strong>${avg(g)==null?'Noch offen':avg(g).toFixed(1).replace('.',',')+'/10'}</strong></div><div class="detail-review-faces">${members().map(m=>`<div>${avatar(m.profile)}<b>${esc(m.profile?.initials||'?')}</b><strong>${rating(g.id,m.user_id)==null?'–':rating(g.id,m.user_id)+'/10'}</strong></div>`).join('')}</div></div>
  ${scoreExplanation(score)}
  </section>`;
@@ -466,10 +481,10 @@ function detail(){
  </section>`;
  return pageShell(`<main class="detail detail-v17 detail-v18">
  <div class="detail-v17-top"><button class="back" data-action="go" data-screen="catalog">‹ Alle Spiele</button>${g.release_status==='upcoming'?`<button class="back release-back" data-action="go" data-screen="upcoming">◷ Release-Radar</button>`:''}</div>
- <header class="hero detail-v17-hero">${cover(g,'hero',true)}<div class="hero-title detail-v17-title"><span class="detail-overline">LAN LIBRARY / SPIELPROFIL</span><h1>${esc(g.title)}</h1><div class="detail-v17-hero-tags">${saleBadge(g)}${releaseTag(g)}<span>${esc(taxonomyLabel(g))}</span></div></div></header>
+ <header class="hero detail-v17-hero">${cover(g,'hero',true)}<div class="hero-title detail-v17-title"><span class="detail-overline">LAN LIBRARY / SPIELPROFIL</span><h1>${esc(g.title)}</h1><div class="detail-v17-hero-tags">${saleBadge(g)}${releaseTag(g)}${detailTags(g)}</div></div></header>
  ${quickActions}
  ${ratingControls}
- <div class="stats detail-v17-stats"><div><small>LAN-SCORE</small><strong class="detail-big-score">${score.score==null?'–':score.score}${score.provisional&&score.score!=null?'<sup>*</sup>':''}</strong><span>${score.provisional?'vorläufig':'von 100 Punkten'}</span></div><div><small>GRUPPE</small><strong class="gold">${avg(g)==null?'–':avg(g).toFixed(1).replace('.',',')}</strong><span>von 10 Punkten</span></div><div><small>STEAM</small><strong class="teal">${g.steam_positive_percent==null?'–':g.steam_positive_percent+'%'}</strong><span>positive Bewertungen</span></div><div><small>PREIS</small><strong>${euro(g.price_eur)}</strong>${sale?`<span><s>${euro(g.steam_regular_price_eur)}</s> · -${sale.off}%</span>`:'<span>DE · aktueller Stand</span>'}</div></div>
+ <div class="stats detail-v17-stats"><div><small>LAN-SCORE</small><strong class="detail-big-score">${score.score==null?'–':score.score}${score.provisional&&score.score!=null?'<sup>*</sup>':''}</strong><span>${score.provisional?'vorläufig':'von 100 Punkten'}</span></div><div><small>UNSERE WERTUNG</small><strong class="gold">${avg(g)==null?'–':avg(g).toFixed(1).replace('.',',')}</strong><span>von 10 Punkten</span></div><div><small>STEAM</small><strong class="teal">${g.steam_positive_percent==null?'–':g.steam_positive_percent+'%'}</strong><span>positive Bewertungen</span></div><div><small>PREIS</small><strong>${euro(g.price_eur)}</strong>${sale?`<span><s>${euro(g.steam_regular_price_eur)}</s> · -${sale.off}%</span>`:'<span>DE · aktueller Stand</span>'}</div></div>
  ${tabsHtml}
  ${tab==='group'?group:tab==='more'?more:overview}
  </main>`);
@@ -608,9 +623,10 @@ async function execute(a,el){switch(a){
  case 'set-match-mode':st.filters.matchModes[el.dataset.key]=el.dataset.mode==='all'?'all':'any';render();return;
  case 'toggle-multi':{const key=el.dataset.key,value=el.dataset.value;const sel=st.filters[key]||[];st.filters[key]=sel.includes(value)?sel.filter(x=>x!==value):[...sel,value];render();return;}
  case 'clear-multi':st.filters[el.dataset.key]=[];render();return;
+ case 'reset-catalog':st.search='';st.sort='name';st.desc=false;st.saleOnly=false;st.viewMode='rich';st.filtersOpen=false;st.menu=null;st.openedChoice=null;st.filters={genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false};render();return;
  case 'reset-filters':st.saleOnly=false;st.filters={genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false};st.openedChoice=null;render();return;
  case 'toggle-owner':st.menu=st.menu==='owner:'+el.dataset.user?null:'owner:'+el.dataset.user;render();return;
- case 'save-owner':{const v=el.dataset.value;await repo.setOwnership(st.gameId,el.dataset.user,v==='unknown'?'unknown':v==='no'?'no':'yes',v==='unknown'||v==='no'?[]:v.split(' + '));st.menu=null;await load();showToast('Besitzstand gespeichert.');return}
+ case 'save-owner':{if(gameById()?.group_shared_access)throw Error('Dieses LAN-Spiel ist für alle Gruppenmitglieder verfügbar.');const v=el.dataset.value;await repo.setOwnership(st.gameId,el.dataset.user,v==='unknown'?'unknown':v==='no'?'no':'yes',v==='unknown'||v==='no'?[]:v.split(' + '));st.menu=null;await load();showToast('Besitzstand gespeichert.');return}
  case 'rate':if(!ratingAllowed(gameById()))throw Error('Bewertung erst bei veröffentlichtem Spiel und bestätigtem Besitz möglich.');await repo.setRating(st.gameId,Number(el.dataset.value));await load();return;
  case 'clear-rating':await repo.setRating(st.gameId,null);await load();return;
  case 'toggle-lan-list':{const id=el.dataset.id||st.gameId;const enable=!isOnLanList(id);await setLanList(id,enable);await load();showToast(enable?'Für eure LAN vorgemerkt.':'Vormerkung entfernt.');return;}
