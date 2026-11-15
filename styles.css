@@ -410,3 +410,12 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .pending-games p{color:#abc2cb;font-size:12px}
 .pending-item{padding:8px 2px;border-top:1px solid #ffffff12;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .pending-item small{color:#9dbac8;font-size:11px}
+
+/* 1.0: detail header displays all important cover content while the backdrop fills the frame. */
+.hero .cover{background:#082435;isolation:isolate}
+.hero .cover img.cover-background{display:block!important;position:absolute;inset:-20px;width:calc(100% + 40px);height:calc(100% + 40px);object-fit:cover!important;filter:blur(22px) brightness(.55) saturate(.9);z-index:1;transform:none!important;pointer-events:none}
+.hero .cover img.cover-foreground{display:block!important;object-fit:contain!important;object-position:center!important;width:100%;height:100%;z-index:2;transform:none!important;filter:drop-shadow(0 3px 13px #07152580)}
+.hero .cover:after{background:linear-gradient(to top,rgba(0,10,20,.72),transparent 55%);z-index:3}
+.hero-title{z-index:4}
+/* Respect the trimmed mobile filters. */
+.filter-panel .multi-group .multi-choices{gap:7px}
