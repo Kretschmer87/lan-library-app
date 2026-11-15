@@ -1,14 +1,22 @@
-import {CloudRepository} from './repository.mjs?v=1.9.0';
-import {DemoRepository} from './demo.mjs?v=1.9.0';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.0';
+import {CloudRepository} from './repository.mjs?v=1.9.1';
+import {DemoRepository} from './demo.mjs?v=1.9.1';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.1';
 
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
 const app=document.querySelector('#app');
-const savedInvite=(()=>{try{return sessionStorage.getItem('lan-invite')}catch{return null}})();
-const st={screen:'catalog',accountTab:'login',data:null,user:null,membership:null,search:'',sort:'name',desc:false,filtersOpen:false,openedChoice:null,viewMode:'rich',filters:{genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false},gameId:null,profileId:null,menu:null,loading:false,toast:'',invite:savedInvite||new URLSearchParams(location.search).get('invite')||'',avatarUrls:{},commentCategory:'Kommentar',eventId:null,wishSearch:'',wishExpanded:false,steamResults:[],steamChoice:null,steamSearching:false,steamError:'',addMethod:'auto',addGenres:[],addClassification:{genres:[],mechanics:[],themes:[]},steamQuery:'',steamOwnershipMessage:'',releaseMine:false,releaseBusy:false,releaseError:'',detailTab:'overview',saleOnly:false};
-if(st.invite){try{sessionStorage.setItem('lan-invite',st.invite)}catch{}}
+// A registration confirmation can open a different browser tab. Store the pending
+// group invitation across tabs, but let a newly opened invitation link override
+// any older stored invitation. Clear the token after a successful join.
+const INVITE_KEY='lan-library-pending-invite';
+const incomingInvite=new URLSearchParams(location.search).get('invite')||'';
+const savedInvite=(()=>{try{return localStorage.getItem(INVITE_KEY)||sessionStorage.getItem('lan-invite')||''}catch{return ''}})();
+const resolvedInvite=incomingInvite||savedInvite;
+const persistInvite=token=>{try{if(token){localStorage.setItem(INVITE_KEY,token);sessionStorage.setItem('lan-invite',token)}else{localStorage.removeItem(INVITE_KEY);sessionStorage.removeItem('lan-invite')}}catch{}};
+
+const st={screen:'catalog',accountTab:'login',data:null,user:null,membership:null,search:'',sort:'name',desc:false,filtersOpen:false,openedChoice:null,viewMode:'rich',filters:{genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false},gameId:null,profileId:null,menu:null,loading:false,toast:'',invite:resolvedInvite,allowCreateGroup:false,avatarUrls:{},commentCategory:'Kommentar',eventId:null,wishSearch:'',wishExpanded:false,steamResults:[],steamChoice:null,steamSearching:false,steamError:'',addMethod:'auto',addGenres:[],addClassification:{genres:[],mechanics:[],themes:[]},steamQuery:'',steamOwnershipMessage:'',releaseMine:false,releaseBusy:false,releaseError:'',detailTab:'overview',saleOnly:false};
+if(st.invite)persistInvite(st.invite);
 if(location.search.includes('invite='))history.replaceState(null,'',location.pathname+location.hash);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const euro=x=>x===null||x===undefined||x===''?'Preis offen':new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(+x);
@@ -490,7 +498,7 @@ function detail(){
  </main>`);
 }
 function authScreen(){return `<div class="auth-wrap"><div class="auth-card"><div class="brand auth-brand"><span class="brand-icon">⌘</span><span>LAN <em>Library</em><small>EURE GEMEINSAME SPIELEBIBLIOTHEK</small></span></div><h1>${st.accountTab==='signup'?'Konto erstellen':'Willkommen zurück'}</h1><p>Privater Spielekatalog für deine LAN-Gruppe.</p><div class="tabs"><button data-action="account-tab" data-value="login" class="${st.accountTab==='login'?'active':''}">Anmelden</button><button data-action="account-tab" data-value="signup" class="${st.accountTab==='signup'?'active':''}">Registrieren</button></div><form id="auth-form"><label>E-Mail<input type="email" name="email" required autocomplete="email" placeholder="mail@beispiel.de"></label><label>Passwort<input type="password" name="password" minlength="8" required autocomplete="${st.accountTab==='signup'?'new-password':'current-password'}" placeholder="Mindestens 8 Zeichen"></label><button class="btn primary full" type="submit">${st.accountTab==='signup'?'Konto erstellen':'Anmelden'}</button></form><p class="hint">${st.invite?'Einladung erkannt: Nach der Anmeldung kannst du der Gruppe beitreten.':'Der Zugang zur Gruppe erfolgt nur per Einladung.'}</p><div class="install-guide">${installInstructions()}</div></div></div>`}
-function joinScreen(){return `<div class="auth-wrap"><div class="auth-card"><h1>Gruppe einrichten</h1><p>${st.invite?'Du hast einen Einladungslink erhalten.':'Erstelle eure Gruppe oder gib einen Einladungscode ein.'}</p><form id="join-form"><label>Dein Anzeigename<input name="name" required minlength="2" maxlength="60" placeholder="z. B. Martin Kretschmer"></label><label>Kürzel<input name="initials" required maxlength="3" placeholder="MK"></label><label>Einladungscode<input name="invite" value="${esc(st.invite)}" placeholder="Code vom Admin (leer = neue Gruppe)"></label><label>Gruppenname (nur beim Erstellen)<input name="groupName" value="LAN Library" placeholder="LAN Library"></label><button class="btn primary full" type="submit">${st.invite?'Gruppe beitreten':'Weiter'}</button></form><p class="hint">Für die erste Gruppe wird das anlegende Konto Administrator. Andere Mitglieder treten mit einem zeitlich begrenzten Link bei.</p><div class="install-guide"><strong>LAN Library auf deinem Gerät</strong>${installInstructions()}</div><button class="text-btn" data-action="logout">Abmelden</button></div></div>`}
+function joinScreen(){return `<div class="auth-wrap"><div class="auth-card"><h1>Gruppe einrichten</h1><p>${st.invite?'Deine Einladung ist erkannt. Bitte jetzt eurer gemeinsamen LAN-Gruppe beitreten.':st.allowCreateGroup?'Du erstellst ausdrücklich eine neue, eigenständige Gruppe.':'Kein Einladungscode erkannt. Wenn dich jemand eingeladen hat, öffne den ursprünglichen Einladungslink erneut.'}</p><form id="join-form"><label>Dein Anzeigename<input name="name" required minlength="2" maxlength="60" placeholder="z. B. Martin Kretschmer"></label><label>Kürzel<input name="initials" required maxlength="3" placeholder="MK"></label>${st.allowCreateGroup?`<label>Gruppenname<input name="groupName" value="LAN Library" minlength="2" maxlength="70" required></label>`:`<label>Einladungscode<input name="invite" value="${esc(st.invite)}" placeholder="Einladungscode vom Administrator" required></label>`}<button class="btn primary full" type="submit">${st.allowCreateGroup?'Eigene Gruppe erstellen':'Bestehender LAN-Gruppe beitreten'}</button></form>${st.allowCreateGroup?`<button class="text-btn" data-action="join-mode" data-mode="join">Doch einer bestehenden Gruppe beitreten</button>`:`<p class="hint">Nach einer E-Mail-Bestätigung den ursprünglichen Einladungslink erneut öffnen, falls der Code fehlt.</p><button class="text-btn" data-action="join-mode" data-mode="create">Stattdessen bewusst eine eigene Gruppe erstellen</button>`}<div class="install-guide"><strong>LAN Library auf deinem Gerät</strong>${installInstructions()}</div><button class="text-btn" data-action="logout">Abmelden</button></div></div>`}
 function steamResults(){return (st.steamResults||[]).map(g=>`<button type="button" class="steam-result" data-action="steam-pick" data-id="${g.id}">${g.image?`<img src="${esc(g.image)}" alt="">`:''}<span><strong>${esc(g.name)}</strong><small>Steam-App ${g.id}${g.priceEUR!=null?' · '+euro(g.priceEUR):''}</small></span><b>Übernehmen</b></button>`).join('');}
 function steamMultiplayerEvidence(choice){
  if(!choice)return 'unknown';
@@ -641,6 +649,7 @@ async function execute(a,el){switch(a){
  case 'add-classification':{const key=el.dataset.key,tag=el.dataset.value;const current=st.addClassification[key]||[];st.addClassification[key]=current.includes(tag)?current.filter(x=>x!==tag):[...current,tag];el.classList.toggle('active',st.addClassification[key].includes(tag));el.setAttribute('aria-pressed',String(st.addClassification[key].includes(tag)));return;}
  case 'add-genre':{const tag=el.dataset.value;st.addGenres=st.addGenres.includes(tag)?st.addGenres.filter(x=>x!==tag):[...st.addGenres,tag];el.classList.toggle('active',st.addGenres.includes(tag));el.setAttribute('aria-pressed',String(st.addGenres.includes(tag)));return;}
  case 'account-tab':st.accountTab=el.dataset.value;render();return;
+ case 'join-mode':st.allowCreateGroup=el.dataset.mode==='create';render();return;
  case 'invite':{const token=await repo.createInvite();const url=new URL(location.href);url.searchParams.set('invite',token);const node=document.querySelector('#invite-result');if(node){node.innerHTML=`<p class="hint">Einladung nur an gewünschte Teilnehmer weitergeben:</p><div class="invite-box"><input readonly value="${esc(url.href)}"><button class="btn primary" data-action="copy-invite" data-invite="${esc(url.href)}">Kopieren</button></div>`;}return}
  case 'copy-invite':await navigator.clipboard.writeText(el.dataset.invite);showToast('Einladungslink kopiert.');return;
  case 'logout':await repo.logout();st.user=null;st.membership=null;st.data=null;st.screen='catalog';render();return;
@@ -683,8 +692,20 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','
    const from=new Date(d.start),to=new Date(d.end);if(!Number.isFinite(+from)||!Number.isFinite(+to)||to<=from)throw Error('Bitte gültigen Beginn und ein späteres Ende angeben.');
    await repo.addDateOption(ev.id,from.toISOString(),to.toISOString());await load();showToast('Terminvorschlag gespeichert.');return;
  }
- if(f.id==='auth-form'){if(st.accountTab==='login'){await repo.signIn(d.email,d.password);st.user=repo.user;st.membership=await repo.groupForUser();await load();}else{const out=await repo.signup(d.email,d.password);if(out.access_token){repo.saveSession(out);st.user=repo.user;st.membership=await repo.groupForUser();await load()}else showToast('Konto erstellt. Bestätige zuerst deine E-Mail und melde dich an.')}return}
- if(f.id==='join-form'){if(d.invite){await repo.joinGroup(d.invite,d.name,d.initials);try{sessionStorage.removeItem('lan-invite')}catch{}st.invite='';}else{await repo.createGroup(d.groupName,d.name,d.initials)}await load();return}
+ if(f.id==='auth-form'){if(st.accountTab==='login'){await repo.signIn(d.email,d.password);st.user=repo.user;st.membership=await repo.groupForUser();await load();}else{const out=await repo.signup(d.email,d.password);if(out.access_token){repo.saveSession(out);st.user=repo.user;st.membership=await repo.groupForUser();await load()}else showToast('Konto erstellt: Bestätige die E-Mail und öffne danach erneut den ursprünglichen Einladungslink.')}return}
+ if(f.id==='join-form'){
+   if(st.allowCreateGroup){
+     if(!d.groupName||!d.groupName.trim())throw Error('Bitte einen Gruppennamen eingeben.');
+     await repo.createGroup(d.groupName,d.name,d.initials);
+     persistInvite('');st.invite='';
+   }else{
+     const token=String(d.invite||'').trim();
+     if(!token)throw Error('Kein Einladungscode: Bitte den Link vom Administrator erneut öffnen.');
+     await repo.joinGroup(token,d.name,d.initials);
+     persistInvite('');st.invite='';
+   }
+   await load();return;
+ }
  if(f.id==='game-form'){const raw=d.steam.trim();let appId=null;if(raw){let m=raw.match(/(?:\/app\/)?(\d{2,10})(?:\/|$)/);if(!m)throw Error('Bitte eine gültige Steam-App-ID oder einen Steam-Link eingeben.');appId=Number(m[1])}
  const isUpcoming=d.releaseStatus==='upcoming';const max=Number(d.maxPlayers),team=Number(d.teamPlayers);
  if(!isUpcoming&&(!d.mode||!d.confirmed))throw Error('Für erhältliche Spiele ist ein bestätigter Multiplayer-Modus nötig.');
