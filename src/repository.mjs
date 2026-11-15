@@ -47,7 +47,7 @@ export class CloudRepository {
   async joinGroup(token,displayName,initials){const id=await this.rpc('join_lan_group',{p_invite:token,p_name:displayName,p_initials:initials});await this.groupForUser();return id}
   async createInvite(){ensure(this.membership?.role==='admin','Adminrechte erforderlich');return this.rpc('create_lan_invite',{p_group_id:this.membership.group_id})}
   async load(){if(!this.membership)await this.groupForUser();if(!this.membership)return null;const groupId=this.membership.group_id;
-    const [members,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates]=await Promise.all([
+    const [members,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates,tasks]=await Promise.all([
       this.rest('group_members','select=group_id,user_id,role,joined_at&group_id=eq.'+groupId),
       this.rest('games','select=*&group_id=eq.'+groupId+'&order=title.asc'),
       this.rest('game_ownership','select=*&limit=5000'),this.rest('game_ratings','select=*&limit=5000'),
@@ -59,10 +59,11 @@ export class CloudRepository {
       this.rest('lan_attendance','select=*&limit=1000'),
       this.rest('lan_game_wishes','select=*&limit=3000'),
       this.rest('lan_game_selections','select=*&limit=1000'),
-      this.rest('catalog_candidates','select=original_title,review_note,review_status&group_id=eq.'+groupId+'&review_status=eq.needs_review&order=source_position.asc')
+      this.rest('catalog_candidates','select=original_title,review_note,review_status&group_id=eq.'+groupId+'&review_status=eq.needs_review&order=source_position.asc'),
+      this.rest('member_tasks','select=*&group_id=eq.'+groupId+'&order=created_at.desc&limit=100')
     ]);
-    const ids=members.map(m=>m.user_id).join(',');const profiles=ids?await this.rest('profiles','select=user_id,display_name,initials,avatar_path&user_id=in.('+ids+')'):[];
-    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates};
+    const ids=members.map(m=>m.user_id).join(',');const profiles=ids?await this.rest('profiles','select=user_id,display_name,initials,avatar_path,steam_id,steam_synced_at&user_id=in.('+ids+')'):[];
+    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates,tasks};
   }
   async syncSteamReviews(){
     ensure(this.membership?.role==='admin','Adminrechte erforderlich');
@@ -84,6 +85,20 @@ export class CloudRepository {
     }
     for(const error of errors)failed.push({id:'service',error});
     return {updated:[...merged.values()],failed,processed,remainingPossible};
+  }
+  async importSteamLibrary(steamProfile){
+    ensure(this.user&&this.membership,'Bitte zuerst anmelden');
+    return this.request('/functions/v1/steam-owned',{method:'POST',body:{steamProfile},timeout:90000});
+  }
+  async assignTask(targetId,taskType,title,note=''){
+    ensure(this.membership?.role==='admin','Nur Admins können Aufgaben zuweisen');
+    ensure(['steam_library','hardware','profile','custom'].includes(taskType),'Ungültiger Aufgabentyp');
+    const body={group_id:this.membership.group_id,assigned_to:targetId,created_by:this.user.id,task_type:taskType,title,note:note||null};
+    return this.rest('member_tasks','',{method:'POST',headers:{Prefer:'return=representation'},body});
+  }
+  async finishTask(taskId){
+    ensure(this.user,'Bitte anmelden');
+    return this.rest('member_tasks','id=eq.'+encodeURIComponent(taskId)+'&assigned_to=eq.'+this.user.id,{method:'PATCH',headers:{Prefer:'return=representation'},body:{status:'done',completed_at:new Date().toISOString()}});
   }
   async searchSteam(query){const term=String(query||'').trim().slice(0,100);ensure(term.length>=2,'Suchbegriff zu kurz');return this.request('/functions/v1/steam-catalog?'+new URLSearchParams({action:'search',q:term}));}
   async steamDetails(appId){ensure(Number.isInteger(+appId)&&+appId>0,'Ungültige Steam-App-ID');return this.request('/functions/v1/steam-catalog?'+new URLSearchParams({action:'details',id:String(appId)}));}
