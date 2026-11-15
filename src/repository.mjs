@@ -47,11 +47,11 @@ export class CloudRepository {
   async joinGroup(token,displayName,initials){const id=await this.rpc('join_lan_group',{p_invite:token,p_name:displayName,p_initials:initials});await this.groupForUser();return id}
   async createInvite(){ensure(this.membership?.role==='admin','Adminrechte erforderlich');return this.rpc('create_lan_invite',{p_group_id:this.membership.group_id})}
   async load(){if(!this.membership)await this.groupForUser();if(!this.membership)return null;const groupId=this.membership.group_id;
-    const [members,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates,tasks]=await Promise.all([
+    const [members,games,ownership,ratings,favorites,playWishes,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates,tasks]=await Promise.all([
       this.rest('group_members','select=group_id,user_id,role,joined_at&group_id=eq.'+groupId),
       this.rest('games','select=*&group_id=eq.'+groupId+'&order=title.asc'),
       this.rest('game_ownership','select=*&limit=5000'),this.rest('game_ratings','select=*&limit=5000'),
-      this.rest('game_favorites','select=*&limit=5000'),this.rest('game_comments','select=*&order=created_at.desc&limit=1000'),
+      this.rest('game_favorites','select=*&limit=5000'),this.rest('game_play_wishes','select=game_id,user_id,created_at&limit=5000'),this.rest('game_comments','select=*&order=created_at.desc&limit=1000'),
       this.rest('member_hardware','select=*&group_id=eq.'+groupId),
       this.rest('lan_events','select=*&group_id=eq.'+groupId+'&order=created_at.desc'),
       this.rest('lan_date_options','select=*&limit=1000'),
@@ -63,7 +63,7 @@ export class CloudRepository {
       this.rest('member_tasks','select=*&group_id=eq.'+groupId+'&order=created_at.desc&limit=100')
     ]);
     const ids=members.map(m=>m.user_id).join(',');const profiles=ids?await this.rest('profiles','select=user_id,display_name,initials,avatar_path,steam_id,steam_synced_at&user_id=in.('+ids+')'):[];
-    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates,tasks};
+    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,playWishes,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates,tasks};
   }
   async syncSteamReviews(){
     ensure(this.membership?.role==='admin','Adminrechte erforderlich');
@@ -110,8 +110,17 @@ export class CloudRepository {
   async setRating(gameId,rating){if(rating==null)return this.rest('game_ratings',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
     return this.rest('game_ratings','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id,rating}})
   }
-  async setFavorite(gameId,enabled){if(!enabled)return this.rest('game_favorites',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
-    return this.rest('game_favorites','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id}})
+  // Herz = doppelt gewichtetes Must-play für die nächste LAN.
+  // Es ist nur eine der beiden Stufen aktiv; bei Updates wird die andere gelöscht.
+  async setFavorite(gameId,enabled){
+    if(!enabled)return this.rest('game_favorites',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    await this.rest('game_play_wishes',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    return this.rest('game_favorites','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id}});
+  }
+  async setPlayWish(gameId,enabled){
+    if(!enabled)return this.rest('game_play_wishes',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    await this.rest('game_favorites',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
+    return this.rest('game_play_wishes','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=ignore-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id}});
   }
   async addComment(gameId,category,body){return this.rest('game_comments','',{method:'POST',headers:{Prefer:'return=representation'},body:{game_id:gameId,user_id:this.user.id,category,body}})}
   async updateProfile(display_name,initials){return this.rest('profiles',`user_id=eq.${this.user.id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:{display_name,initials}})}
