@@ -432,3 +432,34 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .onboarding-panel h3{font-size:13px;margin:16px 0 6px;color:#baf1ee}
 .steam-import-status{padding:10px;border:1px solid #46798a;border-radius:9px;background:#173d50;overflow-wrap:anywhere}
 @media(max-width:440px){.sort-pop{min-width:min(95vw,310px)}.sort-menu-heading{font-size:11px}.sort-pop button{font-size:13px}.task-line{padding:10px}}
+
+/* Version 1.2 — permanent game wishes, separate from favorites and event votes. */
+.wish-panel{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.wish-panel h2{margin-bottom:5px}
+.wish-panel .hint{margin:0;max-width:460px}
+.wish-toggle{flex:none;min-width:190px}
+.score-details{padding:12px 18px}
+.score-details summary{cursor:pointer;font-weight:800;color:#8febed;list-style-position:inside}
+.score-details .hint{margin:10px 0}
+.score-factor-list{display:grid;gap:5px;margin-top:12px}
+.score-factor{display:grid;grid-template-columns:minmax(0,1fr) 54px 110px;gap:9px;padding:7px 0;border-bottom:1px solid #91cce31c;font-size:12px;align-items:center}
+.score-factor strong{color:#90f4ec;text-align:right}
+.score-factor>span:last-child{text-align:right;color:#bcd2dd}
+.wish-amount{font-size:12px;white-space:nowrap;color:#8ff2ea;font-weight:800}
+.list-wish-marker{color:#8cf0ea;font-size:16px;line-height:1}
+@media(max-width:640px){.wish-panel{flex-direction:column;align-items:stretch}.wish-toggle{min-width:0;width:100%}}
+@media(max-width:520px){.wish-amount{font-size:10px}.score-factor{grid-template-columns:minmax(0,1fr) 41px 100px;gap:5px;font-size:11px}}
+
+/* Version 1.3 – Must-play distinction and hardware risk as warning only. */
+.score-hardware-warning{border:1px solid #9f7348;background:rgba(140,78,29,.13);border-radius:11px;padding:10px 12px;color:#f4cda1!important}
+.card-heart.on{color:#ff8cab!important;filter:drop-shadow(0 0 6px #ff7bb966)}
+.wish-panel .wish-toggle{min-width:min(100%,210px)}
+
+/* v1.3: two clearly differentiated LAN preferences. */
+.wish-panel{display:block}
+.wish-panel .wish-intro{max-width:100%}
+.wish-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:15px}
+.wish-actions>.btn{min-width:0;flex:1 1 200px;white-space:normal;line-height:1.3}
+.must-play-toggle.primary{background:linear-gradient(145deg,#a84670,#73254f);border:1px solid #e886ae;color:#fff;box-shadow:0 0 18px #9e427047}
+.hardware-alert{border-color:#b4834d;background:linear-gradient(120deg,#192b35,#34291c)}
+.hardware-alert strong{color:#f0c07a}.hardware-alert p{color:#dbbd99;margin:6px 0 0}
