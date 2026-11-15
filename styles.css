@@ -419,3 +419,16 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .hero-title{z-index:4}
 /* Respect the trimmed mobile filters. */
 .filter-panel .multi-group .multi-choices{gap:7px}
+
+/* v1.1 — accessible order selection and compact onboarding */
+.sort-menu-heading{display:block;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#99c2d0;margin:8px 12px 3px}
+.sort-order-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;border-top:1px solid #315367;padding:10px 4px 3px;margin-top:6px}
+.sort-pop .sort-order-row button{text-align:center;padding:10px 8px;min-height:42px;border:1px solid #396177;background:#112b3d;border-radius:11px;white-space:nowrap}
+.sort-pop .sort-order-row button.on{border-color:#28dce5;background:#145464}
+.task-line{display:flex;align-items:center;gap:11px;border:1px solid rgba(93,168,185,.28);border-radius:11px;background:#123148;padding:12px;margin:8px 0;width:100%;color:#edf9ff;font:inherit;text-align:left;min-height:48px}
+.task-line>b{font-size:20px;color:#35dce5}.task-line>span{flex:1;min-width:0}.task-line small{display:block;color:#a6c9d5;font-size:11px;font-weight:500;margin-top:2px}.task-line small:last-child{white-space:nowrap}
+.task-done{padding:9px 11px;color:#c4ffff;border:1px solid #3a8e9d;border-radius:8px;background:#145063;font:inherit;font-size:12px}
+.install-guide{margin-top:14px;padding:12px;border-radius:13px;border:1px solid #35637b;background:#123145}.install-guide .hint{margin:6px 0 0}
+.onboarding-panel h3{font-size:13px;margin:16px 0 6px;color:#baf1ee}
+.steam-import-status{padding:10px;border:1px solid #46798a;border-radius:9px;background:#173d50;overflow-wrap:anywhere}
+@media(max-width:440px){.sort-pop{min-width:min(95vw,310px)}.sort-menu-heading{font-size:11px}.sort-pop button{font-size:13px}.task-line{padding:10px}}
