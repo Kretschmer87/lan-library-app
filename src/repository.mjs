@@ -115,6 +115,10 @@ export class CloudRepository {
   async addGame(g){const record={...g,group_id:this.membership.group_id,created_by:this.user.id};
     const a=await this.rest('games','select=*',{method:'POST',headers:{Prefer:'return=representation'},body:record});return a[0];
   }
+  async setGameArchived(gameId,archived){
+    ensure(this.membership?.role==='admin','Nur Administratoren können Spiele archivieren.');
+    return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:{archived_at:archived?new Date().toISOString():null,archived_by:archived?this.user.id:null}});
+  }
   async updateGameClassification(gameId,fields){ensure(this.membership?.role==='admin','Nur Admins können Kategorien bearbeiten');return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:fields})}
   async setOwnership(gameId,targetId,status,launchers=[]){return this.rest('game_ownership','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:targetId,status,launchers:status==='yes'?launchers:[],source:'manual',changed_by:this.user.id}})}
   async setRating(gameId,rating){if(rating==null)return this.rest('game_ratings',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});

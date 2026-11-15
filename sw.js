@@ -1,5 +1,5 @@
 /* Cache only the app shell, never cached authenticated API responses or uploads. */
-const CACHE='lan-lib-online-1.6.0';
+const CACHE='lan-lib-online-1.7.0';
 const SHELL=['./','./index.html','./config.js','./styles.css','./src/app.mjs','./src/demo.mjs','./src/repository.mjs','./src/score.mjs','./manifest.webmanifest','./assets/night-summit.svg','./assets/header-ribbon.svg','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
