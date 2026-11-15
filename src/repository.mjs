@@ -47,7 +47,7 @@ export class CloudRepository {
   async joinGroup(token,displayName,initials){const id=await this.rpc('join_lan_group',{p_invite:token,p_name:displayName,p_initials:initials});await this.groupForUser();return id}
   async createInvite(){ensure(this.membership?.role==='admin','Adminrechte erforderlich');return this.rpc('create_lan_invite',{p_group_id:this.membership.group_id})}
   async load(){if(!this.membership)await this.groupForUser();if(!this.membership)return null;const groupId=this.membership.group_id;
-    const [members,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections]=await Promise.all([
+    const [members,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates]=await Promise.all([
       this.rest('group_members','select=group_id,user_id,role,joined_at&group_id=eq.'+groupId),
       this.rest('games','select=*&group_id=eq.'+groupId+'&order=title.asc'),
       this.rest('game_ownership','select=*&limit=5000'),this.rest('game_ratings','select=*&limit=5000'),
@@ -58,16 +58,39 @@ export class CloudRepository {
       this.rest('lan_date_votes','select=*&limit=2000'),
       this.rest('lan_attendance','select=*&limit=1000'),
       this.rest('lan_game_wishes','select=*&limit=3000'),
-      this.rest('lan_game_selections','select=*&limit=1000')
+      this.rest('lan_game_selections','select=*&limit=1000'),
+      this.rest('catalog_candidates','select=original_title,review_note,review_status&group_id=eq.'+groupId+'&review_status=eq.needs_review&order=source_position.asc')
     ]);
     const ids=members.map(m=>m.user_id).join(',');const profiles=ids?await this.rest('profiles','select=user_id,display_name,initials,avatar_path&user_id=in.('+ids+')'):[];
-    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections};
+    return {groupId,groupName:this.membership.groups?.name||'LAN Library',role:this.membership.role,userId:this.user.id,members,profiles,games,ownership,ratings,favorites,notes,hardware,events,dateOptions,dateVotes,attendance,wishes,selections,candidates};
+  }
+  async syncSteamReviews(){
+    ensure(this.membership?.role==='admin','Adminrechte erforderlich');
+    const qs='?'+new URLSearchParams({group:this.membership.group_id});
+    const responses=await Promise.allSettled([
+      this.request('/functions/v1/steam-reviews'+qs,{timeout:60000}),
+      this.request('/functions/v1/steam-prices'+qs,{timeout:60000})
+    ]);
+    const errors=responses.filter(x=>x.status==='rejected').map(x=>String(x.reason?.message||x.reason));
+    if(responses.every(x=>x.status==='rejected'))throw new Error('Steam-Abgleich fehlgeschlagen: '+errors.join('; '));
+    const merged=new Map(),failed=[];let processed=0,remainingPossible=false;
+    for(const r of responses){
+      if(r.status!=='fulfilled')continue;
+      const x=r.value||{};
+      processed=Math.max(processed,Number(x.processed||0));
+      remainingPossible=remainingPossible||!!x.remainingPossible;
+      failed.push(...(x.failed||[]));
+      for(const entry of x.updated||[]){merged.set(entry.id,{...(merged.get(entry.id)||{}),...entry});}
+    }
+    for(const error of errors)failed.push({id:'service',error});
+    return {updated:[...merged.values()],failed,processed,remainingPossible};
   }
   async searchSteam(query){const term=String(query||'').trim().slice(0,100);ensure(term.length>=2,'Suchbegriff zu kurz');return this.request('/functions/v1/steam-catalog?'+new URLSearchParams({action:'search',q:term}));}
   async steamDetails(appId){ensure(Number.isInteger(+appId)&&+appId>0,'Ungültige Steam-App-ID');return this.request('/functions/v1/steam-catalog?'+new URLSearchParams({action:'details',id:String(appId)}));}
   async addGame(g){const record={...g,group_id:this.membership.group_id,created_by:this.user.id};
     const a=await this.rest('games','select=*',{method:'POST',headers:{Prefer:'return=representation'},body:record});return a[0];
   }
+  async updateGameClassification(gameId,fields){ensure(this.membership?.role==='admin','Nur Admins können Kategorien bearbeiten');return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:fields})}
   async setOwnership(gameId,targetId,status,launchers=[]){return this.rest('game_ownership','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:targetId,status,launchers:status==='yes'?launchers:[],source:'manual',changed_by:this.user.id}})}
   async setRating(gameId,rating){if(rating==null)return this.rest('game_ratings',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
     return this.rest('game_ratings','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id,rating}})
