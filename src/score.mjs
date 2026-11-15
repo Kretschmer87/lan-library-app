@@ -83,15 +83,14 @@ export function ownershipAndPriceFactor(game,memberIds,{budgetPerMemberEUR=30,ex
 }
 
 /**
- * Dauerhafte Spielewünsche: normal=1 Stimme, Herz/Must-play=2 Stimmen.
- * Pro Mitglied zählt höchstens die stärkste Auswahl. Die Bezugsgroesse ist
- * die Zielgruppe von drei Personen, auch wenn noch nicht alle eingeladen sind.
+ * Ein einziges LAN-Vormerken pro Mitglied. Alte Heart- und normale Wunsch-
+ * Einträge bleiben erhalten und werden als eine Stimme zusammengeführt.
  */
 export function wishFactor(game,memberIds,{expectedGroupSize=3}={}){
-  if (!Array.isArray(game.playWishes)||!Array.isArray(game.mustPlays))return null;
-  const hearts=new Set(game.mustPlays),normal=new Set(game.playWishes);
-  const total=memberIds.reduce((sum,id)=>sum+(hearts.has(id)?2:normal.has(id)?1:0),0);
-  return clamp(total/(2*Math.max(1,memberIds.length,expectedGroupSize)));
+  if(!Array.isArray(game.playWishes)||!Array.isArray(game.mustPlays))return null;
+  const interested=new Set([...game.playWishes,...game.mustPlays]);
+  const votes=memberIds.filter(id=>interested.has(id)).length;
+  return clamp(votes/Math.max(1,memberIds.length,expectedGroupSize));
 }
 
 /**

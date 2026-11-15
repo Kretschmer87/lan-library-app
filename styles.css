@@ -616,3 +616,83 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 @media(max-width:510px){.detail-v17{padding:7px 10px 110px}.detail-v17-hero{height:285px;border-radius:19px}.detail-v17-title{left:17px;right:13px;bottom:16px;gap:8px}.detail-v17-title h1{font-size:clamp(26px,7.7vw,39px)}.detail-v17-hero-tags>span:not(.tag){font-size:11px}.detail-v17-actions{padding:13px 0 15px;align-items:stretch;gap:9px}.detail-v17-buttons{flex-wrap:nowrap;width:100%}.detail-v17-buttons .btn{flex:1 1 0;min-width:0;min-height:46px;font-size:11.5px;padding:9px 7px}.detail-v17-actions>span{font-size:10px;margin-left:2px}.detail-v17-stats{gap:8px}.detail-v17-stats>div{min-height:102px;padding:13px 12px}.detail-v17-stats strong{font-size:22px}.detail-v17-stats strong.detail-big-score{font-size:37px}.detail-v17-stats>div>span{font-size:10px}.detail-tab-nav{gap:3px;padding:4px;margin-bottom:12px}.detail-tab{font-size:13px;min-height:46px}.detail-tab-content{gap:11px}.detail-experience,.detail-lan-pulse,.detail-owner-list,.detail-rating-box,.detail-interest,.detail-comment-feed,.detail-comment-form,.detail-tech{padding:16px;border-radius:17px}.detail-experience h2,.detail-group-head h2{font-size:23px}.detail-description{font-size:15px!important}.detail-feature{font-size:11px;padding:7px 9px}.detail-links .btn{flex:1 1 145px;justify-content:center;font-size:12px;padding:10px}.detail-group-head{padding:6px}.detail-interest-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.detail-interest-actions .btn{font-size:11px;min-height:45px;padding:8px 6px}.detail-owner-entry{gap:8px}.detail-owner-entry .avatar{max-width:33px;max-height:33px}.detail-owner-person strong{font-size:13px}.detail-owner-person small{font-size:10px}.detail-owner-entry .owner-pick{font-size:11px;padding:8px}.detail-review-faces{gap:5px}.detail-review-faces>div{flex:1 1 85px;padding:6px;min-height:60px;gap:5px}.detail-review-faces strong{font-size:14px}.detail-rating-box .rating-buttons{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.detail-rating-box .rating-buttons .rate{height:49px}.detail-tech-grid{grid-template-columns:minmax(0,.75fr) minmax(0,1.35fr);font-size:12px;padding:14px 16px}.sale-notice{gap:9px;padding:9px}.sale-notice-art{width:75px;height:76px}.sale-notice-copy strong{font-size:13px}.sale-notice-copy small{font-size:10px}.sale-notice-actions .btn{display:none}.sale-notice-copy .sale-badge{font-size:10px}.sales-heading{flex-wrap:wrap}.detail-sale-panel{flex-direction:column;align-items:stretch}.detail-sale-panel .btn{width:100%;justify-content:center}.archive-row{flex-wrap:wrap}.archive-row .btn{min-width:140px}}
 /* The hero has its own big title. Never duplicate the cover's fallback title. */
 .detail-v17-hero .fallback-cover{opacity:0}
+
+/* v1.8 — a balanced, visual-first controls and detail treatment. */
+.catalog-action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:stretch}
+.catalog-action-grid>.sort-box{position:relative;min-width:0;display:flex}
+.catalog-action-grid .menu-btn{height:100%;width:100%;min-width:0;display:flex;align-items:center;justify-content:center;gap:10px;padding:12px 10px;min-height:61px;border-radius:16px;font-size:15px;white-space:nowrap}
+.catalog-action-grid .sort-box>.menu-btn{justify-content:center}
+.catalog-action-grid .sort-box>.menu-btn span{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
+.catalog-action-grid .sort-box>.menu-btn b{margin-left:0}
+.catalog-action-grid .sale-control-mark{display:grid;place-items:center;width:27px;height:27px;flex:none;border-radius:9px;color:#071d2a;background:#4becdf;font-size:19px;line-height:1;box-shadow:0 0 11px #3aedcb55}
+.catalog-action-grid .sale-filter .pill,.catalog-action-grid .filter-btn .pill{margin-left:0}
+.catalog-action-grid .filter-btn{justify-content:center}
+.catalog-action-grid .sort-pop{z-index:45;left:0;right:auto;min-width:min(280px,90vw)}
+
+.detail-v18 .detail-action-deck{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0 15px}
+.detail-v18 .detail-action-tile{display:flex;align-items:center;justify-content:center;gap:13px;text-decoration:none;border-radius:18px;min-width:0;min-height:77px;padding:13px 10px;border:1px solid #4f8195a8;background:linear-gradient(135deg,#102f42,#102438);box-shadow:0 6px 21px #020c1780,inset 0 1px #ffffff19;color:#f2f8ff;font-size:16px;letter-spacing:-.02em;font-weight:850;cursor:pointer;transition:transform .14s,border-color .14s,box-shadow .14s;white-space:normal}
+.detail-v18 .detail-action-tile:hover{transform:translateY(-2px);border-color:#56c5d7;box-shadow:0 9px 20px #081e2f99}
+.detail-v18 .detail-action-tile:focus-visible{outline:3px solid #79e7ed;outline-offset:3px}
+.detail-v18 .detail-action-tile .detail-brand-svg{width:36px;height:36px;flex:none}
+.detail-v18 .detail-action-wish{color:#ffadc6;border-color:#a45a7e;background:linear-gradient(145deg,#3e2440,#291e37)}
+.detail-v18 .detail-action-wish.active{color:#fff;background:linear-gradient(140deg,#b53875,#813257);border-color:#fc82ae;box-shadow:0 0 21px #d4498144}
+.detail-v18 .detail-action-steam{background:linear-gradient(145deg,#153e5c,#123047);border-color:#487d9f}
+.detail-v18 .detail-action-youtube{background:linear-gradient(145deg,#472336,#301c2b);border-color:#854c67}
+.detail-v18 .detail-action-disabled{opacity:.4;cursor:not-allowed}
+.detail-v18 .detail-rating-first{border:1px solid #6b5f9b9e;background:linear-gradient(118deg,#26283e,#121c33 70%);border-radius:19px;padding:16px 19px 14px;box-shadow:inset 0 1px #ffffff20,0 10px 24px #0006;margin:0 0 15px}
+.detail-v18 .detail-rating-title{display:flex;align-items:center;gap:13px;margin-bottom:13px}
+.detail-v18 .detail-rating-star{display:grid;place-items:center;border-radius:12px;width:43px;height:43px;flex:none;font-size:26px;color:#f9d483;background:#594b2f99;box-shadow:0 0 12px #e7a94436}
+.detail-v18 .detail-rating-title div{min-width:0;flex:1;display:grid;gap:3px}
+.detail-v18 .detail-rating-title small{font-size:10px;letter-spacing:.12em;color:#a8b9dd;font-weight:800}
+.detail-v18 .detail-rating-title strong{font-size:19px;letter-spacing:-.02em;color:#fff}
+.detail-v18 .detail-rating-remove{background:transparent;border:0;color:#d4c2d2;padding:8px 5px;font-size:12px;text-decoration:underline;cursor:pointer}
+.detail-v18 .detail-rating-scale{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px}
+.detail-v18 .detail-rating-scale .rate{width:100%;min-width:0;height:44px;min-height:44px;font-size:15px;border-radius:9px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.detail-v18 .detail-rating-scale .rate:not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.12)}
+.detail-v18 .detail-rating-scale .rate:disabled{opacity:.35;cursor:not-allowed}
+.detail-v18 .detail-rating-scale .rate.picked{outline:3px solid #fff;outline-offset:1px;box-shadow:0 0 15px #76f2ba66}
+.detail-v18 .detail-rating-state{color:#beaab8;font-size:11px;margin:8px 0 0;text-align:center}
+.detail-v18 .detail-v17-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;overflow:hidden;border:1px solid #508197a3;border-radius:19px;background:linear-gradient(160deg,#153448,#0b2336);box-shadow:0 10px 20px #0004;margin-bottom:18px}
+.detail-v18 .detail-v17-stats>div{background:transparent;border:0;border-radius:0;box-shadow:none;min-height:91px;padding:14px 13px;gap:5px;border-right:1px solid #77afba2a}
+.detail-v18 .detail-v17-stats>div:last-child{border-right:0}
+.detail-v18 .detail-v17-stats>div small{font-size:10px;color:#a6c2d5;letter-spacing:.06em}
+.detail-v18 .detail-v17-stats>div strong{font-size:24px}
+.detail-v18 .detail-v17-stats>div strong.detail-big-score{font-size:42px;line-height:1}
+.detail-v18 .detail-v17-stats>div>span{font-size:11px}
+.detail-v18 .detail-v17-stats>div:has(.detail-now-price){padding-right:8px}
+.detail-v18 .detail-lan-pulse{border-radius:17px;padding:19px 22px;align-items:center}
+.detail-v18 .detail-interest-summary{min-height:72px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:16px}
+.detail-v18 .detail-overview-description{max-width:72ch}
+.detail-v18 .detail-experience h2{font-size:clamp(21px,3vw,26px)}
+.detail-v18 .detail-tech-grid{line-height:1.5}
+@media(max-width:720px){
+ .catalog-action-grid{gap:8px}
+ .catalog-action-grid .menu-btn{min-height:63px;padding:9px 8px;flex-direction:column;gap:3px;font-size:13px;line-height:1.1}
+ .catalog-action-grid .sort-box>.menu-btn span{font-size:12px;max-width:100%;text-align:center}
+ .catalog-action-grid .sort-box>.menu-btn b{display:none}
+ .catalog-action-grid .menu-btn .pill{position:absolute;top:2px;right:4px;min-width:18px;height:18px;font-size:10px;padding:0 4px}
+ .catalog-action-grid .sale-filter,.catalog-action-grid .filter-btn{position:relative}
+ .catalog-action-grid .sale-control-mark{width:23px;height:23px;font-size:17px;border-radius:7px}
+ .catalog-action-grid .sort-box>.menu-btn>.ui-icon,.catalog-action-grid .filter-btn>.ui-icon{width:22px;height:22px}
+ .detail-v18 .detail-action-deck{gap:8px;margin:10px 0 13px}
+ .detail-v18 .detail-action-tile{flex-direction:column;gap:4px;min-height:79px;padding:9px 4px;border-radius:14px;font-size:12px;line-height:1.2;text-align:center}
+ .detail-v18 .detail-action-tile .detail-brand-svg{width:33px;height:33px}
+ .detail-v18 .detail-v17-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .detail-v18 .detail-v17-stats>div:nth-child(2){border-right:0}
+ .detail-v18 .detail-v17-stats>div:nth-child(-n+2){border-bottom:1px solid #77afba2a}
+ .detail-v18 .detail-v17-stats>div{min-height:81px;padding:11px 15px}
+ .detail-v18 .detail-v17-stats>div strong{font-size:22px}
+ .detail-v18 .detail-v17-stats>div strong.detail-big-score{font-size:33px}
+}
+@media(max-width:410px){
+ .catalog-action-grid{gap:6px}
+ .catalog-action-grid .menu-btn{padding:7px 4px;font-size:12px;min-height:61px}
+ .catalog-action-grid .sort-box>.menu-btn span{font-size:11px}
+ .detail-v18 .detail-rating-first{padding:12px 11px}
+ .detail-v18 .detail-rating-title{margin-bottom:10px;gap:9px}
+ .detail-v18 .detail-rating-title strong{font-size:16px}
+ .detail-v18 .detail-rating-star{height:36px;width:36px;font-size:23px}
+ .detail-v18 .detail-rating-scale{gap:3px}
+ .detail-v18 .detail-rating-scale .rate{height:42px;min-height:42px;font-size:13px;border-radius:7px}
+ .detail-v18 .detail-action-tile{font-size:11px}
+}
