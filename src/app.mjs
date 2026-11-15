@@ -1,6 +1,6 @@
-import {CloudRepository} from './repository.mjs?v=1.4.0';
-import {DemoRepository} from './demo.mjs?v=1.4.0';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.4.0';
+import {CloudRepository} from './repository.mjs?v=1.5.0';
+import {DemoRepository} from './demo.mjs?v=1.5.0';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.5.0';
 
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
@@ -72,7 +72,13 @@ function cover(g,variant='poster',priority=false){
     'https://www.cdh.cz/galerie/6929-2.jpg'
   ]
  };
- const custom=[...(titleSpecials[g.title]||[]),...(specials[g.steam_app_id]||[])];
+ const upcomingImageFallback={
+  4687860:'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4687860/e683d4a1be5443ea6fa44feb1a16dfcb5c5d9c04/header.jpg',
+  4369620:'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4369620/5fb12ed0a738c952cac29164efa28aa23c5f3744/header.jpg',
+  4623290:'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/4623290/3c921ab3b4e6e7f4505a751d287ccae2639dc2ca/header.jpg',
+  2340970:'https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2340970/93fac97732b31fdb3dd1dcc14047eb7179eb0865/header.jpg'
+ };
+ const custom=[...(titleSpecials[g.title]||[]),...(upcomingImageFallback[g.steam_app_id]?[upcomingImageFallback[g.steam_app_id]]:[]),...(specials[g.steam_app_id]||[])];
  const urls=[...custom,g.cover_url,wide,capsule,tall].map(safeURL).filter(Boolean);
  const unique=[...new Set(urls)];const first=unique.shift();
  return `<div class="cover tone${tone} ${variant==='hero'?'cover-hero':''}"><span class="fallback-cover"><small>LAN LIBRARY</small>${esc(g.title)}</span>${first?`${variant==='hero'?`<img class="cover-background" src="${esc(first)}" alt="" aria-hidden="true" decoding="async" loading="${priority?'eager':'lazy'}" referrerpolicy="no-referrer">`:''}<img class="cover-foreground" src="${esc(first)}" data-fallbacks="${esc(unique.join('|'))}" alt="Cover: ${esc(g.title)}" decoding="async" loading="${priority?'eager':'lazy'}" referrerpolicy="no-referrer">`:''}</div>`;
@@ -127,7 +133,7 @@ const SCORE_PARTS=[
  ['ownershipAndPrice','Besitz + Preis'],['playWishes','Spielwünsche (Herz doppelt)']
 ];
 function scoreExplanation(s){
- return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Fehlende Angaben werden nicht mehr auf die bekannten Werte hochgerechnet: Nicht bewertete Spiele erhalten einen neutralen Schätzwert (5/10) je fehlender persönlicher Stimme. Unbekannter Besitz wird neutral behandelt. Ein Stern (*) kennzeichnet einen vorläufigen Score. Die Werte verändern sich mit bestätigtem Besitz und weiteren Bewertungen.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.known?`${f.value} % erfüllt`:f?.partial?`${f.partial}`:'noch offen'}</span></div>`}).join('')}</div>${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Normale Wünsche zählen einfach, ♥ Must-play doppelt; bei drei Mitgliedern ergeben drei Herzen den vollen Wunsch-Faktor. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
+ return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung bleibt 30/20/15/20/15. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt – fehlende Stimmen werden nicht als fiktive 5/10-Stimmen gerechnet. Nur wenn noch niemand bewertet hat, gilt vorläufig 5/10 als neutral. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.partial?`${f.value??'?'} % · ${f.partial}`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Ein hoher Steam-Wert allein rechtfertigt keinen Spitzenplatz. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Normale Wünsche zählen einfach, ♥ Must-play doppelt; bei drei Mitgliedern ergeben drei Herzen den vollen Wunsch-Faktor. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
 }
 function fitFor(g){return groupFit(toCore(g),Math.max(3,groupMembers().length))}
 function avatar(profile,size='small'){const src=st.avatarUrls[profile?.user_id];return `<span class="avatar ${size}" title="${esc(profile?.display_name||'Mitglied')}">${src?`<img src="${esc(src)}" alt="">`:`<span>${esc(profile?.initials||'?')}</span>`}</span>`}

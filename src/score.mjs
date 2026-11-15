@@ -1,4 +1,4 @@
-/** LAN Library – LAN-Score v1.4. Feste Gewichte, keine Hochrechnung dünner Daten. */
+/** LAN Library – LAN-Score v1.5. Feste Gewichte, keine Hochrechnung dünner Daten. */
 export const DEFAULT_WEIGHTS = Object.freeze({
   groupRating: 30,
   steamRating: 20,
@@ -60,25 +60,26 @@ const normalized = (value,max) => Number.isFinite(value) && value>=0 && value<=m
 const ratingsFor = (game, memberIds) => memberIds.map(id=>game.memberRatings?.[id]).filter(n=>Number.isFinite(n)&&n>=1&&n<=10);
 
 /**
- * Besitz + Preis: Bereits vorhandene Lizenzen zählen vollständig, fehlende Lizenzen
- * nach Erschwinglichkeit. Bei 30 EUR je fehlender Lizenz entspricht 0 EUR = 100%,
- * 15 EUR = 50%, ab 30 EUR = 0%. Der durch Besitz belegte Anteil bleibt erhalten.
- * Ergebnis für 3 Mitglieder: 3 Besitzer=100; 2 Besitzer/teuer=67; 1/teuer=33;
- * auch 0 Besitzer/kostenlos=100, weil keinerlei Kauf erforderlich ist.
- * Unbekannte Besitzstände werden nicht als "nein" gewertet. Falls das Spiel
- * kostenlos ist, ist die Gruppe jedoch unabhängig vom Besitz voll versorgt.
+ * Besitz + Preis (unveraenderte 20-%-Gewichtung):
+ *  - Bestaetigte Lizenzen zaehlen mit 100 %.
+ *  - Fuer noch nicht bestaetigte Besitzer kalkulieren wir vorsichtig die
+ *    MOEGLICHEN Kaufkosten (ohne ihren gespeicherten Besitz als "nein" zu setzen).
+ *  - Je nach Preis erhaelt eine eventuell noetige Lizenz bis zu 100 %:
+ *    0 EUR=100 %, 15 EUR=50 %, >=30 EUR=0 %.
+ *  - Sind alle drei Besitzer bestaetigt, gibt es auch bei unbekanntem Preis 100 %.
+ * Diese pessimistische Kostenprognose ist als vorlaeufig gekennzeichnet, solange
+ * Mitglieder/Besitzstaende fehlen.
  */
 export function ownershipAndPriceFactor(game,memberIds,{budgetPerMemberEUR=30,expectedGroupSize=3}={}){
   const price=game.priceEUR;
-  if (price===0) return 1;
+  const groupSize=Math.max(expectedGroupSize,memberIds.length);
   const statuses=memberIds.map(id=>game.ownership?.[id]??null);
-  // Members who have not joined yet must not be silently treated as owners.
-  if (memberIds.length<expectedGroupSize || statuses.some(s=>typeof s!=='boolean'))return null;
-  const owned=statuses.filter(Boolean).length;
-  if (owned===memberIds.length) return 1;
-  if (!Number.isFinite(price)||price<0)return null;
+  const owned=statuses.filter(s=>s===true).length;
+  if(owned===groupSize) return 1;
+  if(price===0) return 1;
+  if(!Number.isFinite(price)||price<0)return null;
   const affordable=clamp(1-price/Math.max(1,budgetPerMemberEUR));
-  return clamp((owned+(memberIds.length-owned)*affordable)/memberIds.length);
+  return clamp((owned+(groupSize-owned)*affordable)/groupSize);
 }
 
 /**
@@ -94,10 +95,12 @@ export function wishFactor(game,memberIds,{expectedGroupSize=3}={}){
 }
 
 /**
- * 30/20/15/20/15 sind feste Gewichte, auch wenn Werte noch unbekannt sind.
- * Fehlende persönliche Ratings zählen vorläufig neutral mit 5/10 (nicht als
- * Negativwertung); Besitz/Preis unbekannt ebenfalls neutral 50%. Hardware
- * bleibt reiner Hinweis. Noch nicht spielbare Titel haben keinen LAN-Score.
+ * Feste Gewichte 30/20/15/20/15. Der Durchschnitt der bereits bestaetigten
+ * persoenlichen Bewertungen zaehlt voll innerhalb des 30-%-Faktors; fehlende
+ * Bewertungen werden nicht als fiktive 5/10-Stimmen hinzugedichtet. Wenn noch
+ * NIEMAND eine Wertung abgegeben hat, dient 5/10 als neutrale Prognose.
+ * Unbekannte Besitzer werden im Kaufbedarf nur als moegliche Kosten dargestellt.
+ * Hardware hat keinen Einfluss, sondern nur ggf. eine Warnung.
  */
 export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEFAULT_WEIGHTS,budgetPerMemberEUR=30,expectedGroupSize=3}={}) {
   if (!Array.isArray(memberIds)||!memberIds.length)throw new Error('memberIds erforderlich');
@@ -120,22 +123,20 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
     ownershipAndPrice:ownershipAndPriceFactor(game,memberIds,{budgetPerMemberEUR,expectedGroupSize}),
     playWishes:wishFactor(game,memberIds,{expectedGroupSize}),
   };
-  // Fehlende Stimmen von Gruppenmitgliedern dürfen keine einzelne Bewertung
-  // künstlich zu einer vollen 30-%-Gruppenwertung machen.
   const expected=Math.max(expectedGroupSize,memberIds.length);
   const rateCount=Math.min(ratings.length,expected);
   const ratedFraction=rateCount/expected;
-  const personalValue=(ratings.reduce((a,n)=>a+n/10,0)+(expected-rateCount)*.5)/expected;
-  factors.groupRating=personalValue;
+  const ownershipKnown=memberIds.filter(id=>typeof game.ownership?.[id]==='boolean').length;
+  const ownershipEvidence=game.priceEUR===0?1:factors.ownershipAndPrice==null?0:ownershipKnown/expected;
   const confidence={
     groupRating:ratedFraction,
     steamRating:factors.steamRating==null?0:1,
     groupSuitability:factors.groupSuitability==null?0:1,
-    ownershipAndPrice:factors.ownershipAndPrice==null?0:1,
+    ownershipAndPrice:ownershipEvidence,
     playWishes:Array.isArray(game.playWishes)&&Array.isArray(game.mustPlays)?Math.min(1,memberIds.length/expected):0,
   };
-  // Fehlende Angaben erhalten neutrale Annahmen (nicht 0 und nicht 100).
-  // Spielwünsche zählen nur, wenn sie ausdrücklich gesetzt wurden.
+  // Nur wenn noch keine Bewertung abgegeben wurde, dienen 5/10 als neutraler
+  // Schätzwert. Vorhandene Stimmen zählen mit ihrem tatsächlichen Durchschnitt.
   const neutral={groupRating:.5,steamRating:.5,groupSuitability:.25,ownershipAndPrice:.5,playWishes:0};
   let weightedSum=0,observedWeight=0;
   for(const [key,weight] of Object.entries(weights)){
@@ -153,14 +154,16 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
     coveragePercent:Math.round(coverage*100),
     factors:Object.fromEntries(Object.entries(factors).map(([key,value])=>[key,{
       value:value==null?null:Math.round(value*100),weight:weights[key]??0,
-      known:key==='groupRating'?rateCount===expected:value!=null,
-      partial:key==='groupRating'?`${rateCount}/${expected} Mitglieder bewertet`:null,
+      known:value!=null && (key!=='ownershipAndPrice'||confidence.ownershipAndPrice>=1),
+      partial:key==='groupRating'?`${rateCount}/${expected} Stimmen${ratings.length?' · Ø '+mean(ratings).toFixed(1)+'/10':''}`:
+        key==='ownershipAndPrice'&&factors.ownershipAndPrice!=null&&confidence.ownershipAndPrice<1?`Kaufkosten-Prognose · ${ownershipKnown}/${expected} Besitzstände` :null,
+      points:Math.round((value==null?neutral[key]:value)*(weights[key]??0)*10)/10,
     }])),
     warnings:[
       ...(notReleased?['Noch nicht veröffentlicht oder Edition ungeklärt – kein vergleichbarer LAN-Score']:[]),
-      ...(rateCount<expected?[`Eigene Bewertung: ${rateCount} von ${expected} Stimmen bekannt; weitere Stimmen vorläufig neutral`]:[]),
+      ...(rateCount<expected?[`Eigene Bewertung: ${rateCount} von ${expected} Stimmen bekannt; bisheriger Mittelwert zählt vorläufig`]:[]),
       ...(memberIds.length<expectedGroupSize?[`Noch ${expectedGroupSize-memberIds.length} LAN-Mitglied${expectedGroupSize-memberIds.length===1?'':'er'} nicht beigetreten`]:[]),
-      ...(factors.ownershipAndPrice===null?['Besitz oder Preis noch nicht vollständig bekannt']:[]),
+      ...(factors.ownershipAndPrice===null?['Besitz oder Preis noch nicht vollständig bekannt']:ownershipEvidence<1?['Besitz noch nicht bei allen Mitgliedern bestätigt; mögliche Kaufkosten vorsichtig geschätzt']:[]),
       ...hardwareWarnings,
       ...(fit.state!=='private_group'?[fit.explanation]:[])
     ],
