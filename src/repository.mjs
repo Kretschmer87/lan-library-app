@@ -86,6 +86,16 @@ export class CloudRepository {
     for(const error of errors)failed.push({id:'service',error});
     return {updated:[...merged.values()],failed,processed,remainingPossible};
   }
+  async syncReleaseRadar(manual=false){
+    ensure(this.user&&this.membership,'Bitte zuerst anmelden');
+    if(manual)ensure(this.membership.role==='admin','Manuelles Release-Update nur für Admins');
+    return this.request('/functions/v1/steam-releases'+(manual?'?force=1':''),{timeout:85000});
+  }
+  async updateGameRelease(gameId,fields){
+    ensure(this.membership?.role==='admin','Nur Admins können Termine ändern');
+    const body={release_date:fields.release_date||null,release_label:String(fields.release_label||'Termin offen').slice(0,140)};
+    return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}&release_status=eq.upcoming`,{method:'PATCH',headers:{Prefer:'return=representation'},body});
+  }
   async importSteamLibrary(steamProfile){
     ensure(this.user&&this.membership,'Bitte zuerst anmelden');
     return this.request('/functions/v1/steam-owned',{method:'POST',body:{steamProfile},timeout:90000});
