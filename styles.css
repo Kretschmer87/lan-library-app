@@ -743,3 +743,13 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .game-card .rating-group .rating-copy small{white-space:normal;overflow-wrap:normal;line-height:1.08;max-width:100%}
 @media(max-width:600px){.game-card .rating-group .rating-copy small{font-size:8px;letter-spacing:0}}
 @media(max-width:370px){.game-card .rating-group .rating-copy small{font-size:7px}}
+
+/* v1.9.2 — iOS Dynamic Island / notch safe area.
+   With viewport-fit=cover + black-translucent, the page starts behind the iOS
+   status bar. Reserve the real top inset inside the app header; do not shift
+   the whole viewport or add a guessed fixed 44px margin. Browsers without a
+   top inset get 0px, so Android and ordinary desktop layouts stay unchanged. */
+:root{--header-safe-top:env(safe-area-inset-top,0px)}
+.header{height:calc(106px + var(--header-safe-top));padding-top:var(--header-safe-top)}
+@media(max-width:900px){.header{height:calc(80px + var(--header-safe-top))}}
+@media(max-width:520px){.header{height:calc(73px + var(--header-safe-top))}}
