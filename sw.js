@@ -1,6 +1,36 @@
-/* Cache only the app shell, never cached authenticated API responses or uploads. */
-const CACHE='lan-lib-online-1.9.3';
-const SHELL=['./','./index.html','./config.js','./styles.css','./src/app.mjs','./src/demo.mjs','./src/repository.mjs','./src/score.mjs','./manifest.webmanifest','./assets/night-summit.svg','./assets/header-ribbon.svg','./assets/icon.svg','./assets/icon-192.png','./assets/icon-512.png'];
-self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
-self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.origin!==self.location.origin)return; e.respondWith(fetch(e.request).then(res=>{if(res.ok&&SHELL.some(path=>u.pathname.endsWith(path.slice(1)))){const clone=res.clone();caches.open(CACHE).then(c=>c.put(e.request,clone));}return res;}).catch(()=>caches.match(e.request).then(x=>x||caches.match('./index.html'))));});
+/* LAN Library 1.9.4: network-first/offline-fallback, never use stale HTML or JS while online. */
+const CACHE='lan-lib-online-1.9.4';
+const ROOT=new URL(self.registration.scope).pathname;
+const ASSETS=['','index.html','config.js','styles.css','src/app.mjs','src/demo.mjs','src/repository.mjs','src/score.mjs','manifest.webmanifest','assets/night-summit.svg','assets/header-ribbon.svg','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'];
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ const cache=await caches.open(CACHE);
+ await Promise.allSettled(ASSETS.map(async path=>{
+  const url=new URL(path,self.registration.scope);
+  const response=await fetch(url,{cache:'no-store'});
+  if(response.ok)await cache.put(url,response);
+ }));
+ await self.skipWaiting();
+})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ const names=await caches.keys();
+ await Promise.all(names.filter(name=>name.startsWith('lan-lib-online-')&&name!==CACHE).map(name=>caches.delete(name)));
+ await self.clients.claim();
+})()));
+self.addEventListener('fetch',event=>{
+ const request=event.request;
+ if(request.method!=='GET')return;
+ const url=new URL(request.url);
+ if(url.origin!==self.location.origin||!url.pathname.startsWith(ROOT))return;
+ const rel=url.pathname.slice(ROOT.length);
+ if(request.mode!=='navigate'&&!ASSETS.includes(rel))return;
+ event.respondWith((async()=>{
+  try{
+   const response=await fetch(request,{cache:'no-store'});
+   if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(c=>c.put(request,copy)).catch(()=>{}));}
+   return response;
+  }catch{
+   const cache=await caches.open(CACHE);
+   return (await cache.match(request))||(request.mode==='navigate'?await cache.match(new URL('index.html',self.registration.scope)):undefined)||Response.error();
+  }
+ })());
+});
