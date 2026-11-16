@@ -1,6 +1,6 @@
-import {CloudRepository} from './repository.mjs?v=1.9.1';
-import {DemoRepository} from './demo.mjs?v=1.9.1';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.1';
+import {CloudRepository} from './repository.mjs?v=1.9.3';
+import {DemoRepository} from './demo.mjs?v=1.9.3';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.3';
 
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
@@ -458,6 +458,11 @@ function detail(){
  </nav>`;
  const priceDisplay=sale?`<span class="detail-now-price">${euro(g.price_eur)}</span><s>${euro(g.steam_regular_price_eur)}</s>`:`<span class="detail-now-price">${euro(g.price_eur)}</span>`;
  const videoLink=`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title+' gameplay')}`;
+ // Preis-/Rabattdetails dürfen das gesamte Detail-Rendering nicht unterbrechen.
+ // Immer ein definiertes Steam-Ziel vorsehen, auch für Spiele ohne Steam-App-ID.
+ const steamLink=Number.isInteger(Number(g.steam_app_id))&&Number(g.steam_app_id)>0
+   ?`<a class="btn ghost detail-sale-steam" href="https://store.steampowered.com/app/${Number(g.steam_app_id)}/" target="_blank" rel="noopener noreferrer" aria-label="${esc(g.title)}: Angebot auf Steam ansehen">${detailActionIcon('steam')} <span>Zum Angebot</span></a>`
+   :`<span class="hint">Kein Steam-Link hinterlegt</span>`;
  const quickActions=`<div class="detail-action-deck" aria-label="Schnellaktionen">
  <button class="detail-action-tile detail-action-wish ${fav?'active':''}" data-action="toggle-lan-list" data-id="${g.id}" aria-pressed="${fav}" aria-label="${fav?'Von der LAN-Liste entfernen':'Für die nächste LAN vormerken'}">${detailActionIcon('heart')}<span>${fav?'Vorgemerkt':'Für LAN merken'}</span></button>
  ${g.steam_app_id?`<a class="detail-action-tile detail-action-steam" href="https://store.steampowered.com/app/${g.steam_app_id}/" target="_blank" rel="noopener noreferrer" aria-label="${esc(g.title)} auf Steam öffnen">${detailActionIcon('steam')}<span>Steam</span></a>`:`<span class="detail-action-tile detail-action-disabled" aria-label="Steam für dieses Spiel nicht verfügbar">${detailActionIcon('steam')}<span>Kein Steam</span></span>`}
