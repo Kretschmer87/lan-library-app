@@ -1,7 +1,8 @@
-import {CloudRepository} from './repository.mjs?v=1.9.3';
-import {DemoRepository} from './demo.mjs?v=1.9.3';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.3';
+import {CloudRepository} from './repository.mjs?v=1.9.4';
+import {DemoRepository} from './demo.mjs?v=1.9.4';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.4';
 
+const APP_VERSION='1.9.4';
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
@@ -460,7 +461,7 @@ function detail(){
  const videoLink=`https://www.youtube.com/results?search_query=${encodeURIComponent(g.title+' gameplay')}`;
  // Preis-/Rabattdetails dürfen das gesamte Detail-Rendering nicht unterbrechen.
  // Immer ein definiertes Steam-Ziel vorsehen, auch für Spiele ohne Steam-App-ID.
- const steamLink=Number.isInteger(Number(g.steam_app_id))&&Number(g.steam_app_id)>0
+ const steamSaleCTA=Number.isInteger(Number(g.steam_app_id))&&Number(g.steam_app_id)>0
    ?`<a class="btn ghost detail-sale-steam" href="https://store.steampowered.com/app/${Number(g.steam_app_id)}/" target="_blank" rel="noopener noreferrer" aria-label="${esc(g.title)}: Angebot auf Steam ansehen">${detailActionIcon('steam')} <span>Zum Angebot</span></a>`
    :`<span class="hint">Kein Steam-Link hinterlegt</span>`;
  const quickActions=`<div class="detail-action-deck" aria-label="Schnellaktionen">
@@ -475,7 +476,7 @@ function detail(){
    <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':privateTeam?'✓ 3er-Team in eigener LAN-Partie':eligible?'✓ Zu dritt spielbar':'! Gruppenspiel prüfen: Lobby/Teamgröße unklar'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${g.hardware_tier?`<span class="detail-feature">Hardware ${g.hardware_tier}/5</span>`:''}</div>
 
  </div>
- ${sale?`<div class="detail-sale-panel"><div><strong>${sale.off}% Rabatt bei Steam</strong><span>${euro(sale.old)} regulär · ${euro(sale.now)} aktuell</span></div>${steamLink}</div>`:''}
+ ${sale?`<div class="detail-sale-panel"><div><strong>${sale.off}% Rabatt bei Steam</strong><span>${euro(sale.old)} regulär · ${euro(sale.now)} aktuell</span></div>${steamSaleCTA}</div>`:''}
  <div class="detail-lan-pulse"><div><span class="detail-overline">EURE LAN</span><h2>${playWishCount(g.id)} von ${total} vorgemerkt</h2></div><button class="detail-lan-pulse-go" data-action="detail-tab" data-value="group">Besitz & Stimmen ansehen ›</button></div>
  ${score.hardwareWarnings?.length?`<div class="hardware-alert detail-risk"><strong>⚠ Hardware-Hinweis</strong><p>${esc(score.hardwareWarnings.join(' · '))}</p></div>`:''}
  <details class="detail-tech"><summary>Weitere Spieldaten und Quellen</summary><div class="detail-tech-grid"><span>Preis / Status</span><strong>${priceDisplay}</strong><span>Multiplayer</span><strong>${esc(lobbyText)}</strong><span>Quelle</span><strong>${esc(g.source_label||'Nicht bekannt')}</strong><span>LAN-Score-Abdeckung</span><strong>${score.coveragePercent}%${score.provisional?' · vorläufig':''}</strong>${g.release_status!=='available'?`<span>Release</span><strong>${esc(g.release_label||'Noch offen')}</strong>`:''}</div></details>
@@ -526,7 +527,7 @@ function add(){return pageShell(`<main class="detail"><button class="back" data-
 function membersPage(){return pageShell(`<main><div class="intro"><h1>Mitglieder</h1><p>Private Gruppe · ${members().length} Mitglieder</p></div><div class="panel"><h2>Eure Gruppe</h2>${members().map(m=>`<button class="member-link" data-action="open-profile" data-id="${m.user_id}">${avatar(m.profile,'medium')}<span><strong>${esc(m.profile?.display_name||'Mitglied')}</strong><small>${esc(m.profile?.initials)} · ${m.role==='admin'?'Administrator':'Mitglied'}</small></span><b>›</b></button>`).join('')}</div>${st.data.role==='admin'?`<div class="panel"><h2>Aufgaben zuweisen</h2><p class="hint">Die Empfänger sehen diese Aufgaben unter Einstellungen → Dein Einstieg.</p><form id="assign-task-form"><label>Mitglied<select name="userId" required>${members().map(m=>`<option value="${m.user_id}">${esc(m.profile?.display_name||'Mitglied')}</option>`).join('')}</select></label><label>Aufgabe<select name="taskType"><option value="steam_library">Steam-Bibliothek freigeben</option><option value="hardware">PC-Hardware eintragen</option><option value="profile">Profilbild ergänzen</option><option value="custom">Eigene Aufgabe</option></select></label><label>Zusatzinfo (optional)<input name="note" maxlength="650" placeholder="z. B. vor der nächsten LAN"></label><label>Eigener Titel (bei eigener Aufgabe)<input name="customTitle" maxlength="150" placeholder="z. B. Mikrofon testen"></label><button class="btn ghost full" type="submit">Aufgabe zuweisen</button></form><div class="task-list-admin">${(st.data.tasks||[]).map(t=>`<div class="task-line"><span>${esc(st.data.profiles.find(p=>p.user_id===t.assigned_to)?.initials||'?')} · ${esc(t.title)}</span><small>${t.status==='done'?'✓ Erledigt':'Offen'}</small></div>`).join('')}</div></div>`:''}${st.data.role==='admin'?`<div class="panel"><h2>Mitglied einladen</h2><p class="hint">Einladungscode 7 Tage gültig, maximal 3 Verwendungen. Nur eingeloggte Benutzer können beitreten.</p><button class="btn primary full" data-action="invite">Einladungslink erstellen</button><div id="invite-result"></div></div>`:''}<div class="panel"><h2>Mein Konto</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function profilePage(){const profile=st.data.profiles.find(p=>p.user_id===st.profileId);if(!profile){st.screen='members';return membersPage()}const its=st.data.ownership.filter(o=>o.user_id===st.profileId&&o.status==='yes').map(o=>st.data.games.find(g=>g.id===o.game_id)).filter(Boolean);const my=st.data.ownership.filter(o=>o.user_id===st.data.userId&&o.status==='yes').map(o=>o.game_id);const overlap=its.filter(g=>my.includes(g.id));const ratings=st.data.ratings.filter(r=>r.user_id===st.profileId);const mine=st.profileId===st.data.userId;
  return pageShell(`<main class="detail"><button class="back" data-action="go" data-screen="members">‹ Zurück zu Mitglieder</button><div class="profile-head">${avatar(profile,'large')}<div><h1>${esc(profile.display_name)}</h1><span class="tag">${esc(profile.initials)}</span></div></div>${hardwarePanel(profile.user_id,mine)}${mine?`<div class="panel"><h2>Mein Profil bearbeiten</h2><form id="profile-form"><label>Name<input name="displayName" value="${esc(profile.display_name)}" minlength="2" maxlength="60" required></label><label>Kürzel<input name="initials" value="${esc(profile.initials)}" maxlength="3" required></label><button type="submit" class="btn ghost full">Änderungen speichern</button></form><form id="avatar-form"><label>Profilbild auswählen<input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required></label><button class="btn ghost full" type="submit">Profilbild hochladen</button></form></div>`:''}<div class="panel"><h2>Spiele von ${esc(profile.initials)} <span class="muted">(${its.length})</span></h2>${its.length?`<div class="tile-grid">${its.slice(0,16).map(g=>`<button class="tile" data-action="open-game" data-id="${g.id}">${cover(g)}<strong>${esc(g.title)}</strong></button>`).join('')}</div>`:`<p class="hint">Noch keine bestätigten Besitztitel.</p>`}</div>${!mine?`<div class="panel"><h2>Gemeinsam mit mir (${overlap.length})</h2><p class="hint">Besitz-Schnittmenge, keine automatische Garantie für Crossplay.</p>${overlap.map(g=>`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} ›</button>`).join('')||'<p class="hint">Noch keine bestätigte Überschneidung.</p>'}</div>`:''}<div class="panel"><h2>Bewertungen (${ratings.length})</h2>${ratings.length?ratings.map(r=>{const g=st.data.games.find(g=>g.id===r.game_id);return g?`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} <strong>${r.rating}/10</strong></button>`:''}).join(''):'<p class="hint">Noch keine Bewertungen.</p>'}</div></main>`)}
-function settingsPage(){return pageShell(`<main class="detail"><h1>Einstellungen</h1>${onboardingCard()}<div class="panel"><h2>Auf iPhone / Android installieren</h2>${installInstructions()}<p class="hint">Updates werden automatisch installiert und beim nächsten sicheren Moment geladen. Während du ein Formular bearbeitest, wird nicht unterbrochen.</p></div>${steamConnectionCard()}${st.data.role==='admin'?`<div class="panel archive-manager"><h2>Archivierte Spiele <span class="archive-pill">${archivedGames().length}</span></h2><p>Ausgeblendete Spiele sind nicht gelöscht. Bewertungen, Besitzstände und Kommentare bleiben erhalten.</p>${archivedGames().length?archivedGames().map(g=>`<div class="archive-row"><span>${esc(g.title)}</span><button class="btn ghost" data-action="restore-game" data-id="${g.id}">Wiederherstellen</button></div>`).join(''):'<p class="hint">Keine archivierten Spiele.</p>'}</div>`:''}<div class="panel"><h2>Mein Konto</h2><p class="hint">Profilbild, Anzeigename und Kürzel bearbeiten.</p><button class="btn primary full" data-action="open-profile" data-id="${st.data.userId}">Mein Profil bearbeiten</button></div><div class="panel"><h2>Mitglieder</h2><button class="btn ghost full" data-action="go" data-screen="members">Gruppenmitglieder ansehen</button></div><div class="panel"><h2>Steam-Preise & Bewertungen</h2><p class="hint">Beim Öffnen durch einen Admin prüft die App fällige Steam-Daten automatisch im Hintergrund. Preis- und Angebotsdaten werden frühestens nach 24 Stunden aktualisiert, Bewertungen nach sieben Tagen. Angebote werden im Katalog markiert; auf neue Rabatte für noch nicht besessene Spiele wird in der App hingewiesen. Eine Benachrichtigung bei geschlossener App ist noch nicht eingerichtet.</p><p class="hint">Steam-Wertungen werden als positive Stimmen in Prozent und Preise als aktuelle Momentaufnahme gespeichert. Beide Daten werden automatisch abgeglichen. Spiele außerhalb von Steam haben möglicherweise keine Wertung.</p>${st.data.role==='admin'?`<button class="btn ghost full" data-action="sync-reviews">Steam-Preise und Bewertungen aktualisieren</button>${st.steamLastResult?`<p class=\"hint\" style=\"overflow-wrap:anywhere\">${esc(st.steamLastResult)}</p>`:''}`:''}</div><div class="panel"><h2>Anmeldung</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
+function settingsPage(){return pageShell(`<main class="detail"><h1>Einstellungen</h1><p class="hint" aria-label="Installierte App-Version">App-Version ${APP_VERSION} · automatische Updates aktiv</p>${onboardingCard()}<div class="panel"><h2>Auf iPhone / Android installieren</h2>${installInstructions()}<p class="hint">Updates werden automatisch installiert und beim nächsten sicheren Moment geladen. Während du ein Formular bearbeitest, wird nicht unterbrochen.</p></div>${steamConnectionCard()}${st.data.role==='admin'?`<div class="panel archive-manager"><h2>Archivierte Spiele <span class="archive-pill">${archivedGames().length}</span></h2><p>Ausgeblendete Spiele sind nicht gelöscht. Bewertungen, Besitzstände und Kommentare bleiben erhalten.</p>${archivedGames().length?archivedGames().map(g=>`<div class="archive-row"><span>${esc(g.title)}</span><button class="btn ghost" data-action="restore-game" data-id="${g.id}">Wiederherstellen</button></div>`).join(''):'<p class="hint">Keine archivierten Spiele.</p>'}</div>`:''}<div class="panel"><h2>Mein Konto</h2><p class="hint">Profilbild, Anzeigename und Kürzel bearbeiten.</p><button class="btn primary full" data-action="open-profile" data-id="${st.data.userId}">Mein Profil bearbeiten</button></div><div class="panel"><h2>Mitglieder</h2><button class="btn ghost full" data-action="go" data-screen="members">Gruppenmitglieder ansehen</button></div><div class="panel"><h2>Steam-Preise & Bewertungen</h2><p class="hint">Beim Öffnen durch einen Admin prüft die App fällige Steam-Daten automatisch im Hintergrund. Preis- und Angebotsdaten werden frühestens nach 24 Stunden aktualisiert, Bewertungen nach sieben Tagen. Angebote werden im Katalog markiert; auf neue Rabatte für noch nicht besessene Spiele wird in der App hingewiesen. Eine Benachrichtigung bei geschlossener App ist noch nicht eingerichtet.</p><p class="hint">Steam-Wertungen werden als positive Stimmen in Prozent und Preise als aktuelle Momentaufnahme gespeichert. Beide Daten werden automatisch abgeglichen. Spiele außerhalb von Steam haben möglicherweise keine Wertung.</p>${st.data.role==='admin'?`<button class="btn ghost full" data-action="sync-reviews">Steam-Preise und Bewertungen aktualisieren</button>${st.steamLastResult?`<p class=\"hint\" style=\"overflow-wrap:anywhere\">${esc(st.steamLastResult)}</p>`:''}`:''}</div><div class="panel"><h2>Anmeldung</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function hardwarePanel(userId,mine){
  const h=(st.data.hardware||[]).find(x=>x.user_id===userId);
  const val=(name)=>esc(h?.[name]??'');
@@ -725,28 +726,52 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','
  if(f.id==='avatar-form'){const file=f.querySelector('input[type=file]').files?.[0];if(!file)throw Error('Bitte ein Bild auswählen.');if(file.size>8*1024*1024)throw Error('Bild zu groß. Maximal 8 MB.');const img=await createImageBitmap(file);const cv=document.createElement('canvas');cv.width=cv.height=256;const ctx=cv.getContext('2d');const side=Math.min(img.width,img.height);ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,256,256);img.close?.();const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.82));await repo.uploadAvatar(blob);st.avatarUrls={};await load();showToast('Profilbild gespeichert.');return}
  }catch(err){showToast(err.message)}});
 async function init(){try{st.loading=true;render();if(DEMO){st.user=repo.user;st.membership=repo.membership;st.data=await repo.load();}else{st.user=await repo.restore();if(st.user){st.membership=await repo.groupForUser();if(st.membership){st.data=await repo.load();await loadAvatars();}}}st.loading=false;render();if(!DEMO){if(st.data?.role==='admin')setTimeout(()=>syncSteamReviews(false),1700);setTimeout(()=>syncUpcoming(false),2100);setInterval(()=>{if(!document.hidden&&st.data){syncUpcoming(false);if(st.data.role==='admin')syncSteamReviews(false)}},3600000);setInterval(async()=>{if(document.hidden||!st.user||!st.membership)return;try{const saved=st.screen;st.data=await repo.load();if(['catalog','upcoming','detail','members','profile','settings','calendar'].includes(saved)&&!document.querySelector('input:focus, textarea:focus'))render()}catch{}},15000)}}catch(err){st.loading=false;app.innerHTML=`<div class="auth-wrap"><div class="auth-card"><h2>Start fehlgeschlagen</h2><p>${esc(err.message)}</p><button class="btn" data-action="reload">Erneut versuchen</button></div></div>`}}
+// Reliable update path: no persistent stale form flag, independently verifies the
+// deployed HTML build (cache-busted), and refreshes only when no current form is dirty.
 if('serviceWorker' in navigator&&['https:','http:'].includes(location.protocol)){
- let updatePending=false,registered=null,hadController=!!navigator.serviceWorker.controller,editingForm=false;
+ let updatePending=false,registered=null,hadController=!!navigator.serviceWorker.controller;
+ let checking=false,lastChecked=0,lastReloadAttempt=0;
+ const dirtyForms=new WeakSet();
  const safeToReload=()=>{
-  const active=document.activeElement;
-  const inEditor=active&&active.matches?.('input,textarea,select,[contenteditable="true"]');
-  // Preserve any typed form content until the user leaves the editor.
-  return !document.hidden&&!inEditor&&!editingForm;
+  const focused=document.activeElement;
+  const editing=!!focused?.matches?.('input,textarea,select,[contenteditable="true"]');
+  const unsaved=[...document.forms].some(f=>dirtyForms.has(f));
+  return !document.hidden&&!editing&&!unsaved;
  };
  const tryAutoUpdate=()=>{
-  if(!updatePending||!safeToReload())return;
-  let last=0;try{last=Number(sessionStorage.getItem('lan-auto-update-at')||0)}catch{}
-  if(Date.now()-last<12000)return;
-  try{sessionStorage.setItem('lan-auto-update-at',String(Date.now()))}catch{}
-  updatePending=false;location.reload();
+  if(!updatePending||!safeToReload()||Date.now()-lastReloadAttempt<12000)return;
+  lastReloadAttempt=Date.now();
+  updatePending=false;
+  // Force a fresh navigation, not a previously cached document with a stale module URL.
+  const next=new URL(location.href);
+  next.searchParams.set('app-build',String(Date.now()));
+  location.replace(next.href);
  };
- navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadController){hadController=true;return;}updatePending=true;setTimeout(tryAutoUpdate,250);});
- document.addEventListener('input',e=>{if(e.target.closest?.('form')&&e.target.matches?.('input,textarea,select'))editingForm=true;},true);
- document.addEventListener('submit',()=>{editingForm=false;setTimeout(tryAutoUpdate,750)},true);
+ const checkServerVersion=async(force=false)=>{
+  if(checking||document.hidden||(!force&&Date.now()-lastChecked<15000))return;
+  checking=true;lastChecked=Date.now();
+  try{
+   const url=new URL('./index.html',location.href);
+   url.searchParams.set('version-check',String(Date.now()));
+   const response=await fetch(url.href,{cache:'no-store',redirect:'follow'});
+   if(!response.ok)return;
+   const html=await response.text();
+   const found=html.match(/<meta\s+name=["']app-version["']\s+content=["']([0-9.]+)["']/i);
+   if(found && found[1]!==APP_VERSION){updatePending=true;tryAutoUpdate()}
+  }catch{}finally{checking=false}
+ };
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  if(!hadController){hadController=true;return}
+  updatePending=true;tryAutoUpdate();
+ });
+ document.addEventListener('input',e=>{const f=e.target.closest?.('form');if(f)dirtyForms.add(f)},true);
+ document.addEventListener('submit',e=>{dirtyForms.delete(e.target);setTimeout(tryAutoUpdate,750)},true);
  document.addEventListener('focusout',()=>{if(updatePending)setTimeout(tryAutoUpdate,400)},true);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){registered?.update().catch(()=>{});tryAutoUpdate()}});
- window.addEventListener('pageshow',()=>{registered?.update().catch(()=>{});tryAutoUpdate()});
- navigator.serviceWorker.register('./sw.js').then(reg=>{registered=reg;reg.update().catch(()=>{});}).catch(()=>{});
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate()}});
+ window.addEventListener('pageshow',()=>{registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate()});
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{registered=reg;reg.update().catch(()=>{});setTimeout(()=>checkServerVersion(true),1300)}).catch(()=>{setTimeout(()=>checkServerVersion(true),1300)});
+ setInterval(()=>{if(!document.hidden){registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate()}},15*60*1000);
 }
+
 
 init();
