@@ -1,140 +1,158 @@
-/* LAN Library Steam-Import-Fix 1.9.4a.
- * Incremental compatibility patch for app.mjs 1.9.4 until Github write access is restored.
- * No application data is sent to third parties beyond the existing Supabase Steam catalog API.
+/* LAN Library 1.9.4b — confirmed Steam multiplayer => form is valid at submit.
+ * Does NOT change database, ownership, ratings, or data of existing games.
+ * Uses Steam Store categories from the existing authenticated steam-catalog function.
  */
 (() => {
   'use strict';
-  const PREFIX='Steam-Import-Korrektur 1.9.4a';
-  let selectedId=null;
-  let currentMode=null;
-  let userChangedMode=false;
-  let requestIndex=0;
-  let scheduled=false;
-  const infoCache=new Map();
-  const app=document.querySelector('#app');
-  if(!app)return;
+  const PATCH = '1.9.4b';
+  const app = document.getElementById('app');
+  if (!app) return;
+  let selectedId = 0;
+  let selectedMode = null;
+  let modeManuallyChosen = false;
+  let pending = 0;
+  let queued = false;
+  const cache = new Map();
 
-  function state(){
-    const form=document.getElementById('game-form');
-    const selected=document.querySelector('.steam-selected');
-    if(!form||!selected)return null;
-    const id=Number(form.querySelector('[name="steam"]')?.value);
-    if(!Number.isSafeInteger(id)||id<=0)return null;
-    const note=selected.querySelector('strong')?.textContent||'';
-    if(!note)return null;
-    return {form,selected,id,supported:!!document.querySelector('.steam-mode-evidence.supported'),solo:!!document.querySelector('.steam-mode-evidence.solo')};
+  function evidence(form) {
+    const selected = document.querySelector('.steam-selected');
+    if (!selected || !form) return null;
+    const id = Number(form.elements.namedItem('steam')?.value);
+    if (!Number.isSafeInteger(id) || id <= 0) return null;
+    const known = !!document.querySelector('.steam-mode-evidence.supported');
+    const solo = !!document.querySelector('.steam-mode-evidence.solo');
+    return {id, known, solo};
   }
-  function classified(cats){
-    const arr=Array.isArray(cats)?cats.map(x=>String(x||'').toLowerCase()):[];
-    const matches=(pattern)=>arr.some(x=>pattern.test(x));
-    if(matches(/(?:\bco[ -]?op\b|\bkoop\b|kooperativ|cooperative)/i))return 'coop_pve';
-    if(matches(/(?:\bpvp\b|player versus player)/i))return 'other_multi';
-    if(matches(/(?:multiplayer|multi.player|mehrspieler|mmo|versus|ffa|deathmatch|local.*together)/i))return 'other_multi';
+  function infer(categories) {
+    const values = Array.isArray(categories) ? categories.map(x => String(x).toLowerCase()) : [];
+    if (values.some(x => /\bco[ -]?op\b|\bkoop\b|cooperative|kooperativ/.test(x))) return 'coop_pve';
+    if (values.some(x => /\bpvp\b|player versus player|\bversus\b|\bdeathmatch\b/.test(x))) return 'other_multi';
+    if (values.some(x => /multi.?player|mehrspieler|online play|\bmmo\b/.test(x))) return 'other_multi';
     return null;
   }
-  function setMode(form,mode){
-    const input=form.querySelector('#mode-value');
-    if(!input||!mode)return;
-    let btn=form.querySelector('.game-modes [data-value="'+mode+'"]');
-    if(!btn && mode==='other_multi'){
-      const wrap=form.querySelector('.game-modes');
-      if(wrap){
-        btn=document.createElement('button');
-        btn.type='button';btn.className='mode-btn';btn.dataset.action='mode';btn.dataset.value='other_multi';
-        btn.textContent='Mehrspieler (Modus offen)';
+  async function getMode(id) {
+    if (cache.has(id)) return cache.get(id);
+    try {
+      const conf = window.LAN_CONFIG || {};
+      const session = JSON.parse(localStorage.getItem('lan-library-v1-session') || 'null');
+      if (!conf.supabaseUrl || !conf.supabaseAnonKey || !session?.access_token) return null;
+      const url = conf.supabaseUrl.replace(/\/$/, '') + '/functions/v1/steam-catalog?' + new URLSearchParams({action:'details', id:String(id)});
+      const r = await fetch(url, {cache:'no-store', signal:AbortSignal.timeout(15000), headers: {apikey:conf.supabaseAnonKey, Authorization:'Bearer ' + session.access_token}});
+      if (!r.ok) return null;
+      const info = await r.json();
+      if (Number(info?.id) !== id) return null;
+      const mode = infer(info.steamCategories);
+      if (mode) cache.set(id, mode);
+      return mode;
+    } catch { return null; }
+  }
+  function chooseMode(form, mode) {
+    if (!mode) return;
+    const input = form.querySelector('input[name="mode"]');
+    if (!input) return;
+    let btn = form.querySelector('.game-modes [data-value="' + mode + '"]');
+    if (!btn && mode === 'other_multi') {
+      const wrap = form.querySelector('.game-modes');
+      if (wrap) {
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.dataset.action = 'mode';
+        btn.dataset.value = 'other_multi';
+        btn.className = 'mode-btn';
+        btn.textContent = 'Mehrspieler (Modus offen)';
         wrap.append(btn);
       }
     }
-    input.value=mode;
-    for(const el of form.querySelectorAll('.mode-btn'))el.classList.toggle('selected',el.dataset.value===mode);
+    input.value = mode;
+    for (const b of form.querySelectorAll('.game-modes .mode-btn')) b.classList.toggle('selected', b.dataset.value === mode);
   }
-  function addHint(form,msg,positive){
-    let tip=form.querySelector('#steam-auto-import-hint');
-    if(!tip){
-      tip=document.createElement('p');tip.id='steam-auto-import-hint';
-      tip.style.cssText='border:1px solid rgba(53,204,198,.38);border-radius:12px;padding:12px 14px;margin:12px 0;line-height:1.45;font-size:.94em;';
-      const label=form.querySelector('.tag-picker.game-modes');
-      if(label)label.parentNode.insertBefore(tip,label);
-      else form.prepend(tip);
+  function validSteamChoice(form) {
+    const x = evidence(form);
+    return !!(x && x.known && !x.solo);
+  }
+  function completeSteamFields(form) {
+    if (!validSteamChoice(form)) return false;
+    // Critical: complete the two fields BEFORE app.mjs's FormData(form) is called.
+    const mode = (modeManuallyChosen ? (form.elements.namedItem('mode')?.value || selectedMode) : selectedMode) || 'other_multi';
+    chooseMode(form, mode);
+    const confirmed = form.elements.namedItem('confirmed');
+    if (confirmed) confirmed.checked = true;
+    return true;
+  }
+  function showBadge(form, known) {
+    let status = form.querySelector('#steam-import-v194b');
+    if (!status) {
+      status = document.createElement('p');
+      status.id = 'steam-import-v194b';
+      status.style.cssText = 'border:1px solid rgba(34,209,208,.48);padding:10px 12px;border-radius:12px;font-size:.92em;line-height:1.5;';
+      form.querySelector('.game-modes')?.before(status);
     }
-    if(tip.textContent!==msg)tip.textContent=msg;
-    tip.style.borderColor=positive?'rgba(53,204,198,.38)':'rgba(230,176,89,.4)';
+    const message = known
+      ? '✓ Steam-Import-Automatik ' + PATCH + ' aktiv. Mehrspielermodus wird beim Speichern automatisch bestätigt. Spielerzahl und private Lobbys bitte bei Bedarf korrigieren.'
+      : 'Steam-Import-Automatik ' + PATCH + ' aktiv. Für manuelle oder unklare Steam-Einträge bitte Spielmodus auswählen und selbst bestätigen.';
+    if (status.textContent !== message) status.textContent = message;
   }
-  function adjust(){
-    const buttons=app.querySelectorAll('.steam-result b');
-    for(const b of buttons)if(b.textContent==='Übernehmen')b.textContent='Daten auswählen';
-    const label=app.querySelector('[aria-label="Installierte App-Version"]');
-    if(label&&!label.textContent.includes(PREFIX))label.textContent+=' · '+PREFIX;
-    const view=state();
-    if(!view){selectedId=null;currentMode=null;userChangedMode=false;return;}
-    const {form,selected,id,supported,solo}=view;
-    if(id!==selectedId){
-      selectedId=id;currentMode=null;userChangedMode=false;
-      const index=++requestIndex;
-      if(supported)fetchCategories(id).then(mode=>{
-        if(index!==requestIndex||selectedId!==id)return;
-        // Don't override an explicit choice made by the user while metadata is loading.
-        if(mode&&!userChangedMode){currentMode=mode;queueAdjust()}
+  function adjust() {
+    // Visible marker: distinguishes cached old index/app from this new correction.
+    for (const b of app.querySelectorAll('.steam-result b')) if (b.textContent === 'Übernehmen') b.textContent = 'Daten auswählen';
+    const installed = app.querySelector('[aria-label="Installierte App-Version"]');
+    if (installed && !installed.textContent.includes(PATCH)) installed.textContent += ' · Steam-Fix ' + PATCH;
+    const form = document.getElementById('game-form');
+    const x = evidence(form);
+    if (!form || !x) {
+      if (selectedId) {selectedId = 0; ++pending; selectedMode = null; modeManuallyChosen = false;}
+      if (form) showBadge(form, false);
+      return;
+    }
+    if (x.id !== selectedId) {
+      selectedId = x.id;
+      selectedMode = null;
+      modeManuallyChosen = false;
+      const request = ++pending;
+      if (x.known && !x.solo) getMode(x.id).then(mode => {
+        if (request !== pending || selectedId !== x.id || modeManuallyChosen) return;
+        if (mode) selectedMode = mode;
+        queue();
       });
     }
-    const desc=selected.querySelector('span');
-    if(desc&&desc.textContent.includes('werden ins Formular übernommen'))desc.textContent='Steam-Daten ausgewählt – noch NICHT gespeichert. Unten auf „Zur gemeinsamen Bibliothek hinzufügen“ tippen.';
-    const originalIntro=app.querySelector('.steam-import > p.hint');
-    if(originalIntro&&originalIntro.textContent.includes('Multiplayer-Modus muss vor dem Speichern bestätigt werden'))originalIntro.textContent='Spiel suchen, Steam-Daten auswählen und unten speichern. Einen von Steam bestätigten Mehrspielermodus übernimmt die App automatisch.';
-    const confirmed=form.querySelector('[name="confirmed"]');
-    const confirmationRow=confirmed?.closest('label');
-    const checkboxHasSteamEvidence=supported&&!solo;
-    if(checkboxHasSteamEvidence){
-      const choice=userChangedMode?(form.querySelector('#mode-value')?.value||currentMode):(currentMode||'other_multi');
-      if(choice)setMode(form,choice);
-      if(confirmed){confirmed.checked=true;}
-      if(confirmationRow){confirmationRow.hidden=true;confirmationRow.style.display='none';}
-      const label=choice==='coop_pve'?'Online-Koop':'Mehrspieler';
-      addHint(form,'✓ Steam bestätigt '+label+'. Die Bestätigung wird automatisch übernommen. Die vorausgefüllten Spielerzahlen und privaten Lobbys sind nicht durch Steam verifiziert und können bei Bedarf angepasst werden.',true);
-    }else{
-      if(confirmationRow){confirmationRow.hidden=false;confirmationRow.style.display='';}
-      addHint(form,solo?'Steam meldet keinen bestätigten Mehrspielermodus. Nur mit tatsächlich geprüftem Multiplayer-Mod manuell freigeben.':'Steam liefert keinen eindeutigen Mehrspieler-Nachweis. Bitte Modus auswählen und manuell bestätigen.',false);
+    const title = app.querySelector('.steam-selected span');
+    if (title && !title.textContent.includes('noch nicht gespeichert')) title.textContent = 'Steam-Daten ausgewählt – noch nicht gespeichert. Bitte unten auf „Zur gemeinsamen Bibliothek hinzufügen“ tippen.';
+    const isAuto = x.known && !x.solo;
+    if (isAuto) {
+      completeSteamFields(form);
+      const confirmRow = form.querySelector('label.confirm');
+      if (confirmRow) confirmRow.style.display = 'none';
+    } else {
+      const confirmRow = form.querySelector('label.confirm');
+      if (confirmRow) confirmRow.style.display = '';
     }
+    showBadge(form, isAuto);
   }
-  function queueAdjust(){if(scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;adjust()})}
-  async function fetchCategories(id){
-    if(infoCache.has(id))return infoCache.get(id);
-    try{
-      const config=window.LAN_CONFIG||{};
-      const stored=JSON.parse(localStorage.getItem('lan-library-v1-session')||'null');
-      if(!stored?.access_token||!config.supabaseUrl||!config.supabaseAnonKey)return null;
-      const url=config.supabaseUrl.replace(/\/$/,'')+'/functions/v1/steam-catalog?'+new URLSearchParams({action:'details',id:String(id)});
-      const res=await fetch(url,{headers:{apikey:config.supabaseAnonKey,Authorization:'Bearer '+stored.access_token},cache:'no-store',signal:AbortSignal.timeout(15000)});
-      if(!res.ok)return null;
-      const result=await res.json();
-      if(Number(result?.id)!==id)return null;
-      const mode=classified(result.steamCategories);
-      if(mode)infoCache.set(id,mode);
-      return mode;
-    }catch{return null}
+  function queue() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {queued = false; adjust();});
   }
-  app.addEventListener('click',evt=>{
-    const btn=evt.target.closest?.('.game-modes [data-action="mode"]');
-    if(btn&&state()){
-      userChangedMode=true;currentMode=btn.dataset.value;
+  app.addEventListener('click', event => {
+    const btn = event.target.closest?.('.game-modes [data-action="mode"]');
+    if (btn && evidence(btn.closest('form'))) {
+      modeManuallyChosen = true;
+      selectedMode = btn.dataset.value;
     }
-  },true);
-  document.addEventListener('submit',evt=>{
-    const form=evt.target;
-    if(form?.id!=='game-form')return;
-    const view=state();
-    if(!view||!view.supported||view.solo)return;
-    // In a Steam-certified multiplayer game no manual checkbox is required.
-    const checkbox=form.querySelector('[name="confirmed"]');
-    if(checkbox)checkbox.checked=true;
-    if(!form.querySelector('#mode-value')?.value)setMode(form,currentMode||'other_multi');
-  },true);
-  app.addEventListener('click',evt=>{
-    if(evt.target.closest?.('[data-action="steam-clear"]')){
-      requestIndex++;selectedId=null;currentMode=null;userChangedMode=false;
-    }
-  },true);
-  const observer=new MutationObserver(queueAdjust);
-  observer.observe(app,{childList:true,subtree:true});
-  queueAdjust();
+  }, true);
+  // Capture phase on DOCUMENT, *before* app.mjs's bubble-phase document listener.
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (form?.id !== 'game-form') return;
+    completeSteamFields(form);
+  }, true);
+  // Native form validation won't block the event: the checkbox is not required in HTML.
+  // But this extra capture handles devices that submit through a click in another path.
+  document.addEventListener('click', event => {
+    const btn = event.target.closest?.('#game-form button[type="submit"]');
+    if (btn) completeSteamFields(btn.closest('form'));
+  }, true);
+  const observer = new MutationObserver(queue);
+  observer.observe(app, {childList:true, subtree:true});
+  queue();
 })();
