@@ -1,7 +1,7 @@
-/* LAN Library 1.9.4: network-first/offline-fallback, never use stale HTML or JS while online. */
-const CACHE='lan-lib-online-1.9.4';
+/* LAN Library 1.9.4a: same application build, additional Steam import correction. */
+const CACHE='lan-lib-online-1.9.4a';
 const ROOT=new URL(self.registration.scope).pathname;
-const ASSETS=['','index.html','config.js','styles.css','src/app.mjs','src/demo.mjs','src/repository.mjs','src/score.mjs','manifest.webmanifest','assets/night-summit.svg','assets/header-ribbon.svg','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'];
+const ASSETS=['','index.html','config.js','styles.css','src/app.mjs','src/steam-import-fix.js','src/demo.mjs','src/repository.mjs','src/score.mjs','manifest.webmanifest','assets/night-summit.svg','assets/header-ribbon.svg','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const cache=await caches.open(CACHE);
  await Promise.allSettled(ASSETS.map(async path=>{
