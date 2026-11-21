@@ -1,8 +1,8 @@
-import {CloudRepository} from './repository.mjs?v=1.9.6';
-import {DemoRepository} from './demo.mjs?v=1.9.6';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.6';
+import {CloudRepository} from './repository.mjs?v=1.9.7';
+import {DemoRepository} from './demo.mjs?v=1.9.7';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.7';
 
-const APP_VERSION='1.9.6';
+const APP_VERSION='1.9.7';
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
@@ -121,7 +121,110 @@ const avg=g=>{const nums=st.data.ratings.filter(r=>r.game_id===g.id&&confirmedOw
 const ownedCount=g=>groupMembers().filter(m=>owner(g.id,m.user_id)?.status==='yes').length;
 // 'Unbesessen' ist nur verifiziert, wenn jedes Gruppenmitglied explizit 'nein' gesetzt hat.
 const isUnowned=g=>g.release_status==='available'&&!g.group_shared_access&&groupMembers().length>0&&groupMembers().every(m=>owner(g.id,m.user_id)?.status==='no');
-const hardwareBadge=g=>!st.showHardware?'':`<span class="hardware-tier-bubble tier-${Number.isInteger(g.hardware_tier)?g.hardware_tier:0}" title="${g.hardware_tier?'Hardware-Anforderung: '+g.hardware_tier+' von 5':'Hardware-Anforderung noch unbekannt'}" aria-label="Hardware-Stufe ${g.hardware_tier||'unbekannt'}">${g.hardware_tier||'?'}</span>`;
+// Vorschlagswerte: allgemeine Hardware-Anforderungen (1080p, mittel bis hoch, ca. 40 FPS).
+// Konservative redaktionelle Voreinstufungen fuer identifizierte Spiele, KEINE Benchmarks.
+// Ein manuell gespeicherter Datenbankwert hat ausnahmslos Vorrang.
+const INITIAL_HARDWARE_BY_STEAM=Object.freeze({
+ 240:1,
+ 440:1,
+ 13230:1,
+ 24790:1,
+ 41070:2,
+ 49520:2,
+ 105600:1,
+ 200710:1,
+ 202710:1,
+ 210770:2,
+ 225840:1,
+ 228380:2,
+ 252950:2,
+ 275850:3,
+ 346110:4,
+ 359550:3,
+ 360170:2,
+ 361420:2,
+ 427410:3,
+ 431240:1,
+ 460930:3,
+ 469600:2,
+ 477160:1,
+ 493520:3,
+ 526870:4,
+ 548430:2,
+ 552500:3,
+ 552520:3,
+ 553850:4,
+ 578080:3,
+ 585420:2,
+ 594650:4,
+ 632360:2,
+ 648800:2,
+ 699130:3,
+ 780310:3,
+ 880940:2,
+ 892970:3,
+ 924970:3,
+ 934700:3,
+ 962130:3,
+ 1063420:3,
+ 1149460:5,
+ 1158940:3,
+ 1159690:4,
+ 1171690:4,
+ 1172470:3,
+ 1172620:3,
+ 1203620:4,
+ 1217060:2,
+ 1237970:2,
+ 1285190:5,
+ 1326470:4,
+ 1335830:3,
+ 1374490:4,
+ 1431300:4,
+ 1446780:2,
+ 1486920:3,
+ 1551360:3,
+ 1566690:5,
+ 1623730:4,
+ 1641960:4,
+ 1677110:3,
+ 1721110:3,
+ 1757300:4,
+ 1808500:4,
+ 1898300:4,
+ 2080690:3,
+ 2221490:3,
+ 2225070:2,
+ 2231380:4,
+ 2285150:4,
+ 2344520:3,
+ 2444750:3,
+ 2605790:3,
+ 3228590:3,
+ 3338950:3
+});
+const INITIAL_HARDWARE_BY_NAME=Object.freeze({
+ 'warcraft iii: the frozen throne 1.8 (offline)':1,
+ 'starcraft ii':2,
+ 'renegade x':2,
+ 'fortnite':3
+});
+export function hardwareTierForGame(g){
+ const manual=Number(g?.hardware_tier);
+ if(g?.hardware_tier!=null&&Number.isInteger(manual)&&manual>=1&&manual<=5)return manual;
+ if(!g||g.release_status==='upcoming'||g.release_status==='unverified')return null;
+ const id=Number(g.steam_app_id);
+ if(Number.isSafeInteger(id)&&Object.hasOwn(INITIAL_HARDWARE_BY_STEAM,id))return INITIAL_HARDWARE_BY_STEAM[id];
+ const title=String(g.title||'').normalize('NFC').toLocaleLowerCase('de-DE').trim();
+ return Object.hasOwn(INITIAL_HARDWARE_BY_NAME,title)?INITIAL_HARDWARE_BY_NAME[title]:null;
+}
+const hardwareBadge=g=>{
+ if(!st.showHardware)return '';
+ const tier=hardwareTierForGame(g);
+ if(tier==null)return ''; // Keine Fragezeichen auf den Covern oder in der Spieleliste.
+ const label=g.hardware_tier!=null?'Manuell festgelegt':'Vorlaeufige Einschaetzung';
+ return `<span class="hardware-tier-bubble tier-${tier}" title="Hardware ${tier}/5 · ${label}" aria-label="Hardware-Anforderung Stufe ${tier} von 5${g.hardware_tier==null?' (vorläufig)':''}">${tier}</span>`;
+};
 function saleInfo(g){
  const off=Number(g.steam_discount_percent),old=Number(g.steam_regular_price_eur),now=Number(g.price_eur);
  if((g.steam_price_checked_at&&Date.now()-new Date(g.steam_price_checked_at).getTime()>72*3600000)||g.release_status==='upcoming'||g.release_status==='unverified'||!Number.isFinite(off)||off<=0||off>100||!Number.isFinite(old)||!Number.isFinite(now)||old<=now||now<0)return null;
@@ -337,7 +440,7 @@ export function evaluateMatch(g,filterState){
  }
  hard(!!f.owned,f.owned==='all'?ownedCount(g)===groupMembers().length:ownedCount(g)>=Number(f.owned),'Besitz: '+(f.owned==='all'?'alle':f.owned));
  hard(f.maxPrice!=='',g.price_eur!=null&&Number(g.price_eur)<=Number(f.maxPrice),g.price_eur==null?'Preis unbekannt':`Preis über ${f.maxPrice} €`);
- hard(!!f.maxHardware,g.hardware_tier!=null&&g.hardware_tier<=Number(f.maxHardware),g.hardware_tier==null?'Hardwarebedarf unbekannt':'Hardwarebedarf zu hoch');
+ hard(!!f.maxHardware,hardwareTierForGame(g)!=null&&hardwareTierForGame(g)<=Number(f.maxHardware),hardwareTierForGame(g)==null?'Hardwarebedarf unbekannt':'Hardwarebedarf zu hoch');
  hard(!!f.minScore,scoreFor(g).score!==null&&scoreFor(g).score>=Number(f.minScore),'LAN-Score zu niedrig / offen');
  hard(f.trio,(g.modes||[]).some(m=>Number(m.sameTeamMax||0)>=3 || (['versus','ffa'].includes(m.type)&&Number(m.maxHumans||0)>=3)),'Zu dritt nicht bestätigt');
  return {matched:matched.length,missing,total:matched.length+missing.length,softMatched,softTotal,hardPassed,full:missing.length===0};
@@ -352,7 +455,7 @@ function displayGames(){
   if(q&&!(g.title+' '+(g.genre||'')+' '+['genres','mechanics','themes'].flatMap(key=>taxonomyFor(g,key)).map(taxonomyName).join(' ')).toLocaleLowerCase('de-DE').includes(q))return false;
   const c=candidates(g);return c.hardPassed&&c.softMatched>=minimumSoftMatches(c.softTotal);
  });
- const key=g=>st.sort==='name'?g.title:st.sort==='release'?releaseSortValue(g):st.sort==='sales'?Number(g.steam_discount_percent||0):st.sort==='group'?avg(g):st.sort==='steam'?g.steam_positive_percent:st.sort==='price'?g.price_eur:st.sort==='owners'?ownedCount(g):st.sort==='hardware'?g.hardware_tier:scoreFor(g).score;
+ const key=g=>st.sort==='name'?g.title:st.sort==='release'?releaseSortValue(g):st.sort==='sales'?Number(g.steam_discount_percent||0):st.sort==='group'?avg(g):st.sort==='steam'?g.steam_positive_percent:st.sort==='price'?g.price_eur:st.sort==='owners'?ownedCount(g):st.sort==='hardware'?hardwareTierForGame(g):scoreFor(g).score;
  gs.sort((a,b)=>{const aScore=candidates(a).softMatched,bScore=candidates(b).softMatched;if(aScore!==bScore)return bScore-aScore;
   let k1=key(a),k2=key(b);if(k1==null&&k2==null)return a.title.localeCompare(b.title,'de');if(k1==null)return 1;if(k2==null)return -1;let n=st.sort==='name'?String(k1).localeCompare(String(k2),'de'):Number(k1)-Number(k2);return (st.desc?-n:n)||a.title.localeCompare(b.title,'de')});return gs;
 }
@@ -373,9 +476,9 @@ function gameCard(g){
  const hasThreeOrMore=owners.length>=3;
  return `<article class="game-card ${isUnowned(g)?'unowned-game':''}" tabindex="0" role="button" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
   <div class="game-top">
-   <div class="game-image">${cover(g,'hero')}${hardwareBadge(g)}</div>
+   <div class="game-image">${cover(g,'hero')}</div>
    <div class="game-content">
-    <div class="card-title-line"><h3>${esc(g.title)}</h3><button class="card-heart ${fav?'on':''}" data-action="fav-card" data-id="${g.id}" aria-label="${fav?'Von der LAN-Liste entfernen':'Für die LAN vormerken'}" title="${fav?'Vormerkung entfernen':'Für die LAN vormerken'}">${fav?'♥':'♡'}</button></div>
+    <div class="card-title-line"><div class="card-title-main"><h3>${esc(g.title)}</h3>${hardwareBadge(g)}</div><button class="card-heart ${fav?'on':''}" data-action="fav-card" data-id="${g.id}" aria-label="${fav?'Von der LAN-Liste entfernen':'Für die LAN vormerken'}" title="${fav?'Vormerkung entfernen':'Für die LAN vormerken'}">${fav?'♥':'♡'}</button></div>
     <div class="game-tags">${isUnowned(g)?'<span class="tag fresh-tag">✦ NEU FÜR EUCH · +10 % LAN</span>':''}${saleBadge(g)}${releaseTag(g)}<span class="tag genre">${esc(taxonomyLabel(g))}</span><span class="tag mode">${esc(mode)}</span><span class="tag ${warn?'warn':'ok'}">${warn?'!':'✓'} ${suitability}</span><span class="tag player-tag">${glyph('people')} ${max>0?'1–'+max:'?'} Spieler</span></div>
     <div class="game-ratings">
      <span class="rating-steam"><span class="rating-icon steam-rating-icon">${steamMark('steam-card-logo')}</span><span class="rating-copy"><small>STEAM</small><b class="${steam===null?'empty-rating':''}">${steam===null?'–':steam+' %'}</b></span></span>
@@ -390,7 +493,7 @@ function gameCard(g){
 function listRow(g){const fav=isOnLanList(g.id),sc=scoreFor(g),gr=avg(g),max=Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0));const matches=candidates(g);
  const gt=taxonomyLabel(g);
  return `<article class="game-list-row ${isUnowned(g)?'unowned-game':''}" role="button" tabindex="0" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
- <div class="list-cover">${cover(g,'hero')}${hardwareBadge(g)}</div><div class="list-main"><strong class="list-title">${esc(g.title)}</strong>${isUnowned(g)?'<span class="fresh-inline">NEU · +10 % LAN</span>':''}${saleBadge(g)}${releaseTag(g)}<span class="list-sub">${esc(gt||g.genre||'Genre offen')} · ${max||'?'} Spieler</span>${matches.total&&matches.missing.length?`<span class="list-mismatch">${esc(matches.missing[0])}</span>`:''}</div>
+ <div class="list-cover">${cover(g,'hero')}</div><div class="list-main"><div class="list-title-line"><strong class="list-title">${esc(g.title)}</strong>${hardwareBadge(g)}</div>${isUnowned(g)?'<span class="fresh-inline">NEU · +10 % LAN</span>':''}${saleBadge(g)}${releaseTag(g)}<span class="list-sub">${esc(gt||g.genre||'Genre offen')} · ${max||'?'} Spieler</span>${matches.total&&matches.missing.length?`<span class="list-mismatch">${esc(matches.missing[0])}</span>`:''}</div>
  <div class="list-metrics"><span title="Steam-Bewertung" class="list-steam-score">${steamMark('steam-list-logo')} <b>${g.steam_positive_percent==null?'–':g.steam_positive_percent+' %'}</b></span><span title="Unsere Wertung">★ <b>${gr==null?'–':gr.toFixed(1).replace('.',',')+'/10'}</b></span></div>
  <div class="list-ownership" title="Besitz in eurer Gruppe">${ownedCount(g)}/${groupMembers().length} <small>Besitz</small></div>
  <div class="list-lan">${sc.score!=null?`<b>${sc.score}${sc.provisional?'*':''}</b><small>LAN</small>`:'<small>LAN-Score<br>offen</small>'}</div>
@@ -476,7 +579,7 @@ function detail(){
  <div class="detail-experience">
    <div class="detail-overline">SPIELÜBERSICHT</div><h2>Auf einen Blick</h2>
    <p class="detail-description">${esc(g.description||'Für dieses Spiel ist noch keine Beschreibung hinterlegt. Gameplay findest du über das YouTube-Symbol oben.')}</p>
-   <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':privateTeam?'✓ 3er-Team in eigener LAN-Partie':eligible?'✓ Zu dritt spielbar':'! Gruppenspiel prüfen: Lobby/Teamgröße unklar'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${g.hardware_tier?`<span class="detail-feature">Hardware ${g.hardware_tier}/5</span>`:''}</div>
+   <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':privateTeam?'✓ 3er-Team in eigener LAN-Partie':eligible?'✓ Zu dritt spielbar':'! Gruppenspiel prüfen: Lobby/Teamgröße unklar'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${hardwareTierForGame(g)!=null?`<span class="detail-feature">Hardware ${hardwareTierForGame(g)}/5${g.hardware_tier==null?' · vorläufig':''}</span>`:''}</div>
 
  </div>
  ${sale?`<div class="detail-sale-panel"><div><strong>${sale.off}% Rabatt bei Steam</strong><span>${euro(sale.old)} regulär · ${euro(sale.now)} aktuell</span></div>${steamSaleCTA}</div>`:''}
@@ -535,7 +638,7 @@ function adminMetadataIssues(g){
  const issues=[];
  if(!g.steam_app_id&&!g.reference_url)issues.push('Keine Steam-ID / alternative Quelle');
  if(g.release_status==='unverified')issues.push('Edition oder Release unklar');
- if(g.hardware_tier==null)issues.push('Hardware-Stufe fehlt');
+ if(hardwareTierForGame(g)==null)issues.push('Hardware-Stufe fehlt');
  if(!String(g.description||'').trim())issues.push('Beschreibung fehlt');
  if(g.release_status==='available'&&(!Array.isArray(g.modes)||!g.modes.length))issues.push('Mehrspielerangaben prüfen');
  return issues;
@@ -564,7 +667,7 @@ function adminGameDataEditor(g){
  <label class="check-row"><input type="checkbox" name="privateSession" ${g.modes?.[0]?.privateSession===true?'checked':''}> Private Partie für eure Gruppe möglich</label>
  <label>Beschreibung (optional)<textarea name="description" maxlength="5000">${value(g.description)}</textarea></label>
  <label>Hardware-Leistungsindex<select name="hardware"><option value="">Unbekannt / noch zu prüfen</option>${[1,2,3,4,5].map(t=>`<option value="${t}" ${g.hardware_tier===t?'selected':''}>${t} – ${{1:'Sehr gering',2:'Gering',3:'Mittel',4:'Hoch',5:'Sehr hoch'}[t]}</option>`).join('')}</select></label>
- <p class="hint">Manuelle Einstufung hat Vorrang. Kein automatisches Überschreiben durch Steam; nur bestätigte Angaben eintragen.</p>
+ <p class="hint">${g.hardware_tier==null&&hardwareTierForGame(g)!=null?`Vorläufiger Vorschlag: Stufe ${hardwareTierForGame(g)}. Wähle eine Stufe, um diese dauerhaft zu speichern. `:''}Manuelle Einstufungen haben Vorrang; Vorschläge sind keine gemessenen FPS.</p>
  <button class="btn primary full" type="submit">Änderungen speichern</button></form></details></div>`;
 }
 

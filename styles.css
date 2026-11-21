@@ -784,3 +784,19 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .admin-data-editor{margin:16px 0}.admin-data-editor form{margin-top:16px;display:grid;gap:12px}
 @media(max-width:420px){.hardware-tier-bubble{width:28px;height:28px;font-size:15px;right:5px;top:5px}
   .game-card .card-title-line h3{letter-spacing:.022em}}
+
+
+/* 1.9.7: Hardware-Index nur neben dem Spieletitel, nie ueber dem Cover. */
+.game-card .card-title-main,.game-list-row .list-title-line{
+ display:flex;align-items:center;gap:8px;min-width:0;flex:1;flex-wrap:wrap;
+}
+.game-card .card-title-main h3{min-width:0;flex:0 1 auto}
+.game-list-row .list-title-line .list-title{min-width:0;flex:0 1 auto}
+.card-title-main .hardware-tier-bubble,.list-title-line .hardware-tier-bubble{
+ position:static;right:auto;top:auto;z-index:auto;flex:none;
+ width:27px;height:27px;border-radius:50%;font-size:14px;line-height:1;
+ box-shadow:0 2px 6px rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.27);
+}
+.list-title-line .hardware-tier-bubble{width:23px;height:23px;font-size:12px}
+@media(max-width:420px){.game-card .card-title-main,.game-list-row .list-title-line{gap:5px}
+.card-title-main .hardware-tier-bubble{width:23px;height:23px;font-size:12px}}
