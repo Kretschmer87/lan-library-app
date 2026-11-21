@@ -146,9 +146,13 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
   const coverage=observedWeight/allWeight;
   const notReleased=game.releaseStatus==='upcoming'||game.releaseStatus==='unverified';
   const usefulData=confidence.steamRating||confidence.groupSuitability||confidence.ownershipAndPrice||confidence.groupRating;
-  const score=notReleased||!usefulData?null:Math.round(weightedSum/allWeight*100);
+  const baseScore=notReleased||!usefulData?null:Math.round(weightedSum/allWeight*100);
+  // Neuentdeckungsbonus nur bei bei ALLEN Mitgliedern bestaetigtem Nichtbesitz.
+  // Unbekannt ist kein Nichtbesitz; Hardware hat weiterhin keinerlei Einfluss.
+  const undiscovered=baseScore!==null && !game.groupSharedAccess && memberIds.every(id=>game.ownership?.[id]===false);
+  const score=undiscovered?Math.min(100,Math.round(baseScore*1.10)):baseScore;
   return {
-    score,
+    score, baseScore, noveltyBonusPercent:undiscovered?10:0,
     provisional:coverage<.995||memberIds.length<expectedGroupSize||notReleased,
     coveragePercent:Math.round(coverage*100),
     factors:Object.fromEntries(Object.entries(factors).map(([key,value])=>[key,{

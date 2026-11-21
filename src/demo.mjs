@@ -23,6 +23,7 @@ export class DemoRepository{
  async updateGameRelease(gameId,fields){const game=data.games.find(g=>g.id===gameId);if(!game)throw Error('Spiel nicht gefunden');Object.assign(game,fields);this.save()}
  async setGameArchived(gameId,archived){const g=data.games.find(x=>x.id===gameId);if(!g)throw Error('Spiel nicht gefunden.');g.archived_at=archived?new Date().toISOString():null;this.save()}
  async updateGameClassification(gameId,fields){const g=data.games.find(x=>x.id===gameId);if(!g)throw Error('Spiel nicht gefunden');Object.assign(g,fields);this.save();return [g]}
+  async updateGameMetadata(gameId,fields){const g=data.games.find(x=>x.id===gameId);if(!g)throw Error('Spiel nicht gefunden');Object.assign(g,fields);this.save();return [g]}
  async setOwnership(gameId,targetId,status,launchers=[]){data.ownership=data.ownership.filter(o=>!(o.game_id===gameId&&o.user_id===targetId));data.ownership.push({game_id:gameId,user_id:targetId,status,launchers});this.save()}
  async setRating(gameId,rating){data.ratings=data.ratings.filter(o=>!(o.game_id===gameId&&o.user_id==='a'));if(rating)data.ratings.push({game_id:gameId,user_id:'a',rating});this.save()}
  async setFavorite(gameId,enabled){data.favorites=data.favorites.filter(o=>!(o.game_id===gameId&&o.user_id==='a'));if(enabled){data.playWishes=data.playWishes.filter(o=>!(o.game_id===gameId&&o.user_id==='a'));data.favorites.push({game_id:gameId,user_id:'a'})}this.save()}

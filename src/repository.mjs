@@ -37,7 +37,18 @@ export class CloudRepository {
     const s=await this.request('/auth/v1/token?grant_type=refresh_token',{method:'POST',auth:false,retry:false,body:{refresh_token}});this.saveSession(s);return s;
   }
   async restore(){if(!this.session?.access_token)return null;
-    try{if(Date.now()/1000>(this.session.expires_at||0)-60) await this.refreshSession();const u=await this.request('/auth/v1/user');this.session.user=u;this.saveSession(this.session);return u}catch{this.session=null;localStorage.removeItem(SESSION_KEY);return null}
+    try{
+      if(Date.now()/1000>(this.session.expires_at||0)-60) await this.refreshSession();
+      const u=await this.request('/auth/v1/user');
+      this.session.user=u;this.saveSession(this.session);return u;
+    }catch(error){
+      // Invalid credentials require login, but an offline request, timeout or
+      // temporary Supabase outage must NOT silently erase the stored session.
+      const reason=String(error?.message||error);
+      const invalid=/\((?:400|401)\)\s*$/.test(reason)||/invalid[_ -]?grant|refresh token not found|invalid refresh token/i.test(reason);
+      if(invalid){this.session=null;localStorage.removeItem(SESSION_KEY);return null;}
+      throw error;
+    }
   }
   async logout(){try{await this.request('/auth/v1/logout',{method:'POST'})}catch{}this.session=null;this.membership=null;localStorage.removeItem(SESSION_KEY);this.avatarCache.forEach(v=>URL.revokeObjectURL(v));this.avatarCache.clear()}
   async rest(table,params='',opts={}){return this.request('/rest/v1/'+table+(params?'?'+params:''),opts)}
@@ -120,6 +131,12 @@ export class CloudRepository {
     return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:{archived_at:archived?new Date().toISOString():null,archived_by:archived?this.user.id:null}});
   }
   async updateGameClassification(gameId,fields){ensure(this.membership?.role==='admin','Nur Admins können Kategorien bearbeiten');return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:fields})}
+   async updateGameMetadata(gameId,fields){
+     ensure(this.membership?.role==='admin','Nur Admins können Spieldaten bearbeiten');
+     const allowed=['title','steam_app_id','description','genre','hardware_tier','reference_url','release_status','release_label','modes','multiplayer_status'];
+     const body=Object.fromEntries(Object.entries(fields).filter(([key])=>allowed.includes(key)));
+     return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body});
+   }
   async setOwnership(gameId,targetId,status,launchers=[]){return this.rest('game_ownership','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:targetId,status,launchers:status==='yes'?launchers:[],source:'manual',changed_by:this.user.id}})}
   async setRating(gameId,rating){if(rating==null)return this.rest('game_ratings',`game_id=eq.${gameId}&user_id=eq.${this.user.id}`,{method:'DELETE'});
     return this.rest('game_ratings','on_conflict=game_id,user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},body:{game_id:gameId,user_id:this.user.id,rating}})

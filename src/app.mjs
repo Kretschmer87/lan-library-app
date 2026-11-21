@@ -1,8 +1,8 @@
-import {CloudRepository} from './repository.mjs?v=1.9.4';
-import {DemoRepository} from './demo.mjs?v=1.9.4';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.4';
+import {CloudRepository} from './repository.mjs?v=1.9.6';
+import {DemoRepository} from './demo.mjs?v=1.9.6';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.6';
 
-const APP_VERSION='1.9.4';
+const APP_VERSION='1.9.6';
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
@@ -16,7 +16,7 @@ const savedInvite=(()=>{try{return localStorage.getItem(INVITE_KEY)||sessionStor
 const resolvedInvite=incomingInvite||savedInvite;
 const persistInvite=token=>{try{if(token){localStorage.setItem(INVITE_KEY,token);sessionStorage.setItem('lan-invite',token)}else{localStorage.removeItem(INVITE_KEY);sessionStorage.removeItem('lan-invite')}}catch{}};
 
-const st={screen:'catalog',accountTab:'login',data:null,user:null,membership:null,search:'',sort:'name',desc:false,filtersOpen:false,openedChoice:null,viewMode:'rich',filters:{genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false},gameId:null,profileId:null,menu:null,loading:false,toast:'',invite:resolvedInvite,allowCreateGroup:false,avatarUrls:{},commentCategory:'Kommentar',eventId:null,wishSearch:'',wishExpanded:false,steamResults:[],steamChoice:null,steamSearching:false,steamError:'',addMethod:'auto',addGenres:[],addClassification:{genres:[],mechanics:[],themes:[]},steamQuery:'',steamOwnershipMessage:'',releaseMine:false,releaseBusy:false,releaseError:'',detailTab:'overview',saleOnly:false};
+const st={screen:'catalog',accountTab:'login',data:null,user:null,membership:null,search:'',sort:'name',desc:false,filtersOpen:false,openedChoice:null,viewMode:'rich',filters:{genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false},gameId:null,profileId:null,menu:null,loading:false,toast:'',invite:resolvedInvite,allowCreateGroup:false,avatarUrls:{},commentCategory:'Kommentar',eventId:null,wishSearch:'',wishExpanded:false,steamResults:[],steamChoice:null,steamSearching:false,steamError:'',addMethod:'auto',addGenres:[],addClassification:{genres:[],mechanics:[],themes:[]},steamQuery:'',steamOwnershipMessage:'',releaseMine:false,releaseBusy:false,releaseError:'',detailTab:'overview',saleOnly:false,showHardware:(()=>{try{return localStorage.getItem('lan-show-hardware')!=='0'}catch{return true}})()};
 if(st.invite)persistInvite(st.invite);
 if(location.search.includes('invite='))history.replaceState(null,'',location.pathname+location.hash);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -119,6 +119,9 @@ const members=()=>groupMembers().map(m=>({...m,profile:st.data.profiles.find(p=>
 const memberLabel=id=>st.data.profiles.find(p=>p.user_id===id)?.initials||'??';
 const avg=g=>{const nums=st.data.ratings.filter(r=>r.game_id===g.id&&confirmedOwner(g.id,r.user_id)).map(r=>r.rating);return nums.length?nums.reduce((a,b)=>a+b,0)/nums.length:null};
 const ownedCount=g=>groupMembers().filter(m=>owner(g.id,m.user_id)?.status==='yes').length;
+// 'Unbesessen' ist nur verifiziert, wenn jedes Gruppenmitglied explizit 'nein' gesetzt hat.
+const isUnowned=g=>g.release_status==='available'&&!g.group_shared_access&&groupMembers().length>0&&groupMembers().every(m=>owner(g.id,m.user_id)?.status==='no');
+const hardwareBadge=g=>!st.showHardware?'':`<span class="hardware-tier-bubble tier-${Number.isInteger(g.hardware_tier)?g.hardware_tier:0}" title="${g.hardware_tier?'Hardware-Anforderung: '+g.hardware_tier+' von 5':'Hardware-Anforderung noch unbekannt'}" aria-label="Hardware-Stufe ${g.hardware_tier||'unbekannt'}">${g.hardware_tier||'?'}</span>`;
 function saleInfo(g){
  const off=Number(g.steam_discount_percent),old=Number(g.steam_regular_price_eur),now=Number(g.price_eur);
  if((g.steam_price_checked_at&&Date.now()-new Date(g.steam_price_checked_at).getTime()>72*3600000)||g.release_status==='upcoming'||g.release_status==='unverified'||!Number.isFinite(off)||off<=0||off>100||!Number.isFinite(old)||!Number.isFinite(now)||old<=now||now<0)return null;
@@ -193,7 +196,7 @@ async function setLanList(gameId,enabled){
 function toCore(g){const ownership={},memberRatings={};for(const m of groupMembers()){const o=owner(g.id,m.user_id);ownership[m.user_id]=o?o.status==='yes'?true:o.status==='no'?false:null:null;const r=usableRating(g.id,m.user_id);if(r)memberRatings[m.user_id]=r;}
  const playWishes=(st.data?.playWishes||[]).filter(w=>w.game_id===g.id).map(w=>w.user_id);
  const mustPlays=(st.data?.favorites||[]).filter(w=>w.game_id===g.id).map(w=>w.user_id);
- return {name:g.title,catalogKind:'game',multiplayerStatus:g.multiplayer_status,modes:g.modes||[],priceEUR:g.price_eur==null?null:Number(g.price_eur),steamPositivePercent:g.steam_positive_percent,hardwareTier:g.hardware_tier,ownership,memberRatings,playWishes,mustPlays,releaseStatus:g.release_status||'available'};}
+ return {name:g.title,catalogKind:'game',multiplayerStatus:g.multiplayer_status,modes:g.modes||[],priceEUR:g.price_eur==null?null:Number(g.price_eur),steamPositivePercent:g.steam_positive_percent,hardwareTier:g.hardware_tier,groupSharedAccess:g.group_shared_access===true,ownership,memberRatings,playWishes,mustPlays,releaseStatus:g.release_status||'available'};}
 function scoreFor(g){
  const score=calculateLanScore(toCore(g),{memberIds:groupMembers().map(m=>m.user_id)});
  // Hardware darf den Score nicht verändern. Warnen nur bei klaren Anzeichen für
@@ -220,7 +223,7 @@ const SCORE_PARTS=[
  ['ownershipAndPrice','Besitz + Preis'],['playWishes','LAN-Vormerkungen']
 ];
 function scoreExplanation(s){
- return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung bleibt 30/20/15/20/15. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt – fehlende Stimmen werden nicht als fiktive 5/10-Stimmen gerechnet. Nur wenn noch niemand bewertet hat, gilt vorläufig 5/10 als neutral. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.partial?`${f.value??'?'} % · ${f.partial}`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Ein hoher Steam-Wert allein rechtfertigt keinen Spitzenplatz. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Jedes Mitglied kann ein Spiel einmal für die LAN vormerken. Bei drei Mitgliedern entsprechen drei Vormerkungen dem vollen Wunsch-Faktor von 15 %. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
+ return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung bleibt 30/20/15/20/15. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt – fehlende Stimmen werden nicht als fiktive 5/10-Stimmen gerechnet. Nur wenn noch niemand bewertet hat, gilt vorläufig 5/10 als neutral. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.partial?`${f.value??'?'} % · ${f.partial}`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.noveltyBonusPercent?`<p class="hint"><b>+10 % Neuentdeckungsbonus:</b> Kein Gruppenmitglied besitzt dieses Spiel (von allen explizit bestätigt). Vor Bonus: ${s.baseScore} Punkte. Maximal 100 Punkte.</p>`:''}${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Ein hoher Steam-Wert allein rechtfertigt keinen Spitzenplatz. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Jedes Mitglied kann ein Spiel einmal für die LAN vormerken. Bei drei Mitgliedern entsprechen drei Vormerkungen dem vollen Wunsch-Faktor von 15 %. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
 }
 function fitFor(g){return groupFit(toCore(g),Math.max(3,groupMembers().length))}
 function avatar(profile,size='small'){const src=st.avatarUrls[profile?.user_id];return `<span class="avatar ${size}" title="${esc(profile?.display_name||'Mitglied')}">${src?`<img src="${esc(src)}" alt="">`:`<span>${esc(profile?.initials||'?')}</span>`}</span>`}
@@ -349,7 +352,7 @@ function displayGames(){
   if(q&&!(g.title+' '+(g.genre||'')+' '+['genres','mechanics','themes'].flatMap(key=>taxonomyFor(g,key)).map(taxonomyName).join(' ')).toLocaleLowerCase('de-DE').includes(q))return false;
   const c=candidates(g);return c.hardPassed&&c.softMatched>=minimumSoftMatches(c.softTotal);
  });
- const key=g=>st.sort==='name'?g.title:st.sort==='release'?releaseSortValue(g):st.sort==='sales'?Number(g.steam_discount_percent||0):st.sort==='group'?avg(g):st.sort==='steam'?g.steam_positive_percent:st.sort==='price'?g.price_eur:st.sort==='owners'?ownedCount(g):scoreFor(g).score;
+ const key=g=>st.sort==='name'?g.title:st.sort==='release'?releaseSortValue(g):st.sort==='sales'?Number(g.steam_discount_percent||0):st.sort==='group'?avg(g):st.sort==='steam'?g.steam_positive_percent:st.sort==='price'?g.price_eur:st.sort==='owners'?ownedCount(g):st.sort==='hardware'?g.hardware_tier:scoreFor(g).score;
  gs.sort((a,b)=>{const aScore=candidates(a).softMatched,bScore=candidates(b).softMatched;if(aScore!==bScore)return bScore-aScore;
   let k1=key(a),k2=key(b);if(k1==null&&k2==null)return a.title.localeCompare(b.title,'de');if(k1==null)return 1;if(k2==null)return -1;let n=st.sort==='name'?String(k1).localeCompare(String(k2),'de'):Number(k1)-Number(k2);return (st.desc?-n:n)||a.title.localeCompare(b.title,'de')});return gs;
 }
@@ -368,12 +371,12 @@ function gameCard(g){
  const scKnown=sc.score!==null;
  const owners=members();
  const hasThreeOrMore=owners.length>=3;
- return `<article class="game-card" tabindex="0" role="button" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
+ return `<article class="game-card ${isUnowned(g)?'unowned-game':''}" tabindex="0" role="button" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
   <div class="game-top">
-   <div class="game-image">${cover(g,'hero')}</div>
+   <div class="game-image">${cover(g,'hero')}${hardwareBadge(g)}</div>
    <div class="game-content">
     <div class="card-title-line"><h3>${esc(g.title)}</h3><button class="card-heart ${fav?'on':''}" data-action="fav-card" data-id="${g.id}" aria-label="${fav?'Von der LAN-Liste entfernen':'Für die LAN vormerken'}" title="${fav?'Vormerkung entfernen':'Für die LAN vormerken'}">${fav?'♥':'♡'}</button></div>
-    <div class="game-tags">${saleBadge(g)}${releaseTag(g)}<span class="tag genre">${esc(taxonomyLabel(g))}</span><span class="tag mode">${esc(mode)}</span><span class="tag ${warn?'warn':'ok'}">${warn?'!':'✓'} ${suitability}</span><span class="tag player-tag">${glyph('people')} ${max>0?'1–'+max:'?'} Spieler</span></div>
+    <div class="game-tags">${isUnowned(g)?'<span class="tag fresh-tag">✦ NEU FÜR EUCH · +10 % LAN</span>':''}${saleBadge(g)}${releaseTag(g)}<span class="tag genre">${esc(taxonomyLabel(g))}</span><span class="tag mode">${esc(mode)}</span><span class="tag ${warn?'warn':'ok'}">${warn?'!':'✓'} ${suitability}</span><span class="tag player-tag">${glyph('people')} ${max>0?'1–'+max:'?'} Spieler</span></div>
     <div class="game-ratings">
      <span class="rating-steam"><span class="rating-icon steam-rating-icon">${steamMark('steam-card-logo')}</span><span class="rating-copy"><small>STEAM</small><b class="${steam===null?'empty-rating':''}">${steam===null?'–':steam+' %'}</b></span></span>
      <span class="rating-group"><span class="rating-icon rating-people">${glyph('people')}</span><span class="rating-copy"><small>UNSERE WERTUNG</small><b class="${group===null?'empty-rating':''}">${group===null?'–':group.toFixed(1).replace('.',',')}${group===null?'':'<em>/10</em>'}</b></span><span class="rating-star" aria-hidden="true">★</span></span>
@@ -386,8 +389,8 @@ function gameCard(g){
 
 function listRow(g){const fav=isOnLanList(g.id),sc=scoreFor(g),gr=avg(g),max=Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0));const matches=candidates(g);
  const gt=taxonomyLabel(g);
- return `<article class="game-list-row" role="button" tabindex="0" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
- <div class="list-cover">${cover(g,'hero')}</div><div class="list-main"><strong class="list-title">${esc(g.title)}</strong>${saleBadge(g)}${releaseTag(g)}<span class="list-sub">${esc(gt||g.genre||'Genre offen')} · ${max||'?'} Spieler</span>${matches.total&&matches.missing.length?`<span class="list-mismatch">${esc(matches.missing[0])}</span>`:''}</div>
+ return `<article class="game-list-row ${isUnowned(g)?'unowned-game':''}" role="button" tabindex="0" data-action="open-game" data-id="${g.id}" aria-label="${esc(g.title)} öffnen">
+ <div class="list-cover">${cover(g,'hero')}${hardwareBadge(g)}</div><div class="list-main"><strong class="list-title">${esc(g.title)}</strong>${isUnowned(g)?'<span class="fresh-inline">NEU · +10 % LAN</span>':''}${saleBadge(g)}${releaseTag(g)}<span class="list-sub">${esc(gt||g.genre||'Genre offen')} · ${max||'?'} Spieler</span>${matches.total&&matches.missing.length?`<span class="list-mismatch">${esc(matches.missing[0])}</span>`:''}</div>
  <div class="list-metrics"><span title="Steam-Bewertung" class="list-steam-score">${steamMark('steam-list-logo')} <b>${g.steam_positive_percent==null?'–':g.steam_positive_percent+' %'}</b></span><span title="Unsere Wertung">★ <b>${gr==null?'–':gr.toFixed(1).replace('.',',')+'/10'}</b></span></div>
  <div class="list-ownership" title="Besitz in eurer Gruppe">${ownedCount(g)}/${groupMembers().length} <small>Besitz</small></div>
  <div class="list-lan">${sc.score!=null?`<b>${sc.score}${sc.provisional?'*':''}</b><small>LAN</small>`:'<small>LAN-Score<br>offen</small>'}</div>
@@ -395,7 +398,7 @@ function listRow(g){const fav=isOnLanList(g.id),sc=scoreFor(g),gr=avg(g),max=Mat
 }
 
 function sortMenu(){
- const values=[['name','Alphabet'],['score','LAN-Score'],['group','Unsere Wertung'],['steam','Steam-Wertung'],['price','Preis'],['owners','Besitz'],['sales','Steam-Angebote'],['release','Demnächst erscheinend']];
+ const values=[['name','Alphabet'],['score','LAN-Score'],['group','Unsere Wertung'],['steam','Steam-Wertung'],['price','Preis'],['owners','Besitz'],['hardware','Hardwarebedarf'],['sales','Steam-Angebote'],['release','Demnächst erscheinend']];
  return `<div class="sort-pop"><strong class="sort-menu-heading">Sortieren nach</strong>${values.map(([v,label])=>`<button data-action="sort" data-value="${v}" class="${st.sort===v?'on':''}">${label}${st.sort===v?' ✓':''}</button>`).join('')}<div class="sort-menu-heading">Reihenfolge</div><div class="sort-order-row"><button data-action="set-sort-direction" data-value="asc" class="${!st.desc?'on':''}">↑ Aufsteigend</button><button data-action="set-sort-direction" data-value="desc" class="${st.desc?'on':''}">↓ Absteigend</button></div></div>`;
 }
 function catalog(){
@@ -405,11 +408,11 @@ function catalog(){
  return pageShell(`<main class="catalog-page">
   <section class="catalog-controls">
    <div class="searchline"><div class="search">${glyph('search')}<input id="search" type="search" value="${esc(st.search)}" placeholder="Spiele durchsuchen …" autocomplete="off" aria-label="Spiele durchsuchen"></div><button type="button" class="catalog-reset-quiet ${canReset?'active':''}" data-action="reset-catalog" aria-label="Standardansicht wiederherstellen: Suche, Filter, Sortierung und Angebote zurücksetzen" title="Standardansicht wiederherstellen" ${canReset?'':'disabled'}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11a9 9 0 1 1 2.8 6.5"/><path d="M3 4v7h7"/></svg></button></div>
-   <div class="bar catalog-action-grid"><div class="sort-box"><button class="menu-btn" data-action="toggle-sort" aria-label="Sortieren: ${{name:'Alphabet',score:'LAN-Score',group:'Unsere Wertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',sales:'Angebote',release:'Nächster Release'}[st.sort]}">${glyph('arrow')} <span>${st.desc?'↓':'↑'} ${{name:'Alphabet',score:'LAN-Score',group:'Unsere Wertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',sales:'Angebote',release:'Nächster Release'}[st.sort]}</span> <b>⌄</b></button>${st.menu==='sort'?sortMenu():''}</div><button class="menu-btn filter-btn ${st.filtersOpen?'selected':''}" data-action="toggle-filters" aria-label="Spiele filtern">${glyph('filter')} <span>Filter</span><span class="pill">${count}</span></button><button class="menu-btn sale-filter ${st.saleOnly?'selected':''}" data-action="toggle-sales" aria-label="Nur rabattierte Spiele anzeigen"><b class="sale-control-mark" aria-hidden="true">%</b><span>Angebote</span><span class="pill">${salesForMe().length}</span></button></div>
-  ${st.filtersOpen?`<div class="filter-panel"><h2>Filter <button class="close-btn" data-action="toggle-filters" aria-label="Filter schließen">×</button></h2><p>Alle Kriterien zuerst. Ähnliche Spiele folgen nach Anzahl erfüllter Wünsche. Preis, Besitz und Hardware bleiben verbindlich.</p>${multiOpts('Genre / Spieltyp','genres',TAXONOMY_GROUPS.genres,'Was für eine Art Spiel ist es? Beispiele: Shooter, RPG, Strategie.')}${multiOpts('Vorlieben / Tags','mechanics',TAXONOMY_GROUPS.mechanics,'Zusätzliche Eigenschaften: z. B. Zombies, Survival oder Tower Defense.')}${multiOpts('Multiplayer','modes',[['Spielmodi & Lobby',MODE_FILTERS]],'Welche Art gemeinsames Spiel ist möglich?')}${opts('Anzahl Besitzer','owned',[['','Egal'],['1','Mindestens einer'],['2','Mindestens zwei'],['all','Alle']])}${opts('Preisgrenze','maxPrice',[['','Egal'],['0','Kostenlos'],['10','Bis 10 €'],['20','Bis 20 €'],['30','Bis 30 €'],['40','Bis 40 €']])}${opts('Hardware-Anforderung','maxHardware',[['','Alle'],['2','Niedrig · einfache PCs'],['3','Mittel · Gaming-PC'],['4','Hoch · leistungsstarker PC']])}${opts('LAN-Score','minScore',[['','Egal'],['60','Ab 60'],['70','Ab 70'],['80','Ab 80'],['90','Ab 90']])}<p class="filter-help">Hardware: nur ein vorläufiges Bedarfsniveau, keine FPS-Prognose. Nicht bewertete Spiele werden als unbekannt angezeigt.</p><label class="check-row"><input type="checkbox" data-filter-check="trio" ${f.trio?'checked':''}> Für drei gemeinsam geeignet</label><div class="row gap"><button class="btn ghost" data-action="reset-filters">Zurücksetzen</button><button class="btn primary" data-action="toggle-filters">Treffer anzeigen</button></div></div>`:''}
+   <div class="bar catalog-action-grid"><div class="sort-box"><button class="menu-btn" data-action="toggle-sort" aria-label="Sortieren: ${{name:'Alphabet',score:'LAN-Score',group:'Unsere Wertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',hardware:'Hardwarebedarf',sales:'Angebote',release:'Nächster Release'}[st.sort]}">${glyph('arrow')} <span>${st.desc?'↓':'↑'} ${{name:'Alphabet',score:'LAN-Score',group:'Unsere Wertung',steam:'Steam-Wertung',price:'Preis',owners:'Besitz',hardware:'Hardwarebedarf',sales:'Angebote',release:'Nächster Release'}[st.sort]}</span> <b>⌄</b></button>${st.menu==='sort'?sortMenu():''}</div><button class="menu-btn filter-btn ${st.filtersOpen?'selected':''}" data-action="toggle-filters" aria-label="Spiele filtern">${glyph('filter')} <span>Filter</span><span class="pill">${count}</span></button><button class="menu-btn sale-filter ${st.saleOnly?'selected':''}" data-action="toggle-sales" aria-label="Nur rabattierte Spiele anzeigen"><b class="sale-control-mark" aria-hidden="true">%</b><span>Angebote</span><span class="pill">${salesForMe().length}</span></button></div>
+  ${st.filtersOpen?`<div class="filter-panel"><h2>Filter <button class="close-btn" data-action="toggle-filters" aria-label="Filter schließen">×</button></h2><p>Alle Kriterien zuerst. Ähnliche Spiele folgen nach Anzahl erfüllter Wünsche. Preis, Besitz und Hardware bleiben verbindlich.</p>${multiOpts('Genre / Spieltyp','genres',TAXONOMY_GROUPS.genres,'Was für eine Art Spiel ist es? Beispiele: Shooter, RPG, Strategie.')}${multiOpts('Vorlieben / Tags','mechanics',TAXONOMY_GROUPS.mechanics,'Zusätzliche Eigenschaften: z. B. Zombies, Survival oder Tower Defense.')}${multiOpts('Multiplayer','modes',[['Spielmodi & Lobby',MODE_FILTERS]],'Welche Art gemeinsames Spiel ist möglich?')}${opts('Anzahl Besitzer','owned',[['','Egal'],['1','Mindestens einer'],['2','Mindestens zwei'],['all','Alle']])}${opts('Preisgrenze','maxPrice',[['','Egal'],['0','Kostenlos'],['10','Bis 10 €'],['20','Bis 20 €'],['30','Bis 30 €'],['40','Bis 40 €']])}${opts('Hardware-Anforderung','maxHardware',[['','Alle'],['1','Nur Stufe 1'],['2','Bis Stufe 2'],['3','Bis Stufe 3'],['4','Bis Stufe 4'],['5','Bis Stufe 5']])}${opts('LAN-Score','minScore',[['','Egal'],['60','Ab 60'],['70','Ab 70'],['80','Ab 80'],['90','Ab 90']])}<p class="filter-help">Hardware: nur ein vorläufiges Bedarfsniveau, keine FPS-Prognose. Nicht bewertete Spiele werden als unbekannt angezeigt.</p><label class="check-row"><input type="checkbox" data-filter-check="trio" ${f.trio?'checked':''}> Für drei gemeinsam geeignet</label><div class="row gap"><button class="btn ghost" data-action="reset-filters">Zurücksetzen</button><button class="btn primary" data-action="toggle-filters">Treffer anzeigen</button></div></div>`:''}
   </section>
   ${releaseNotice()}${saleNotice()}${st.saleOnly?`<div class="sales-heading"><strong>Steam-Angebote für dich</strong><button class="text-btn" data-action="toggle-sales">Alle Spiele anzeigen ×</button></div>`:''}${!st.search&&!count&&!st.saleOnly?releaseSpotlight():''}
-  <div class="list-heading"><h2>${glyph('gamepad')} Spieleübersicht <span class="result-pill" id="result-count">${count?`${full} Treffer`:`${gs.length} Spiele · ${gs.filter(g=>g.release_status==='upcoming').length} angekündigt · ${gs.filter(g=>g.release_status==='unverified').length} offen`}</span></h2><div class="view-controls" role="group" aria-label="Katalogdarstellung"><button class="view-icon ${st.viewMode==='rich'?'selected':''}" data-action="set-view" data-value="rich" aria-label="Große Spielekarten" aria-pressed="${st.viewMode==='rich'}">${glyph('grid')}</button><button class="view-icon ${st.viewMode==='compact'?'selected':''}" data-action="set-view" data-value="compact" aria-label="Kompakte Liste" aria-pressed="${st.viewMode==='compact'}">${glyph('list')}</button></div></div>
+  <div class="list-heading"><h2>${glyph('gamepad')} Spieleübersicht <span class="result-pill" id="result-count">${count?`${full} Treffer`:`${gs.length} Spiele · ${gs.filter(g=>g.release_status==='upcoming').length} angekündigt · ${gs.filter(g=>g.release_status==='unverified').length} offen`}</span></h2><div class="view-controls" role="group" aria-label="Katalogdarstellung"><button class="view-icon hardware-visibility ${st.showHardware?'selected':''}" data-action="toggle-hardware-badges" aria-label="Hardware-Stufen ${st.showHardware?'ausblenden':'einblenden'}" aria-pressed="${st.showHardware}" title="Hardware-Index anzeigen / verbergen">H</button><button class="view-icon ${st.viewMode==='rich'?'selected':''}" data-action="set-view" data-value="rich" aria-label="Große Spielekarten" aria-pressed="${st.viewMode==='rich'}">${glyph('grid')}</button><button class="view-icon ${st.viewMode==='compact'?'selected':''}" data-action="set-view" data-value="compact" aria-label="Kompakte Liste" aria-pressed="${st.viewMode==='compact'}">${glyph('list')}</button></div></div>
   <div id="cards">${(()=>{
     if(!gs.length)return '<div class="empty">Keine passenden Spiele. Bitte die Filter anpassen oder zurücksetzen.</div>';
     const facets=candidates(gs[0]).softTotal,renderer=st.viewMode==='compact'?listRow:gameCard;
@@ -491,7 +494,7 @@ function detail(){
  const more=`<section class="detail-tab-content" id="detail-panel-more"><div class="detail-group-head"><span class="detail-overline">EURE ERFAHRUNGEN</span><h2>Kommentare & Hinweise</h2></div>
  <div class="detail-comment-feed">${notes.length?notes.map(n=>`<article class="detail-comment"><strong>${esc(st.data.profiles.find(p=>p.user_id===n.user_id)?.initials||'?')} · ${esc(n.category)}</strong><p>${esc(n.body)}</p></article>`).join(''):'<div class="detail-empty-comments">Noch keine Kommentare – du kannst den ersten verfassen.</div>'}</div>
  <form class="detail-comment-form" id="comment-form"><div class="tag-picker">${['Kommentar','Hinweis','Technik'].map(c=>`<button type="button" class="tag ${st.commentCategory===c?'active':''}" data-action="comment-type" data-value="${c}">${c}</button>`).join('')}</div><textarea name="body" maxlength="2000" required placeholder="Erfahrungen, Einstellungen oder Server-Tipps …"></textarea><button class="btn primary full" type="submit">Kommentar speichern</button></form>
- ${isAdmin?`<details class="detail-admin-tools"><summary>Admin-Werkzeuge</summary><p>Hier kannst du die Filter-Kategorien pflegen oder das Spiel aus der Übersicht entfernen.</p>${classificationEditor(g)}<div class="detail-archive-actions"><h3>Spiel entfernen</h3><p>Archivieren blendet das Spiel aus, ohne Bewertungen, Besitz oder Kommentare zu löschen. Unter Einstellungen kannst du es wiederherstellen.</p><button class="btn ghost archive-btn" data-action="archive-game">Spiel aus Katalog entfernen</button></div></details>`:''}
+ ${isAdmin?`<details class="detail-admin-tools"><summary>Admin-Werkzeuge</summary><p>Hier kannst du die Filter-Kategorien pflegen oder das Spiel aus der Übersicht entfernen.</p>${classificationEditor(g)}${adminGameDataEditor(g)}<div class="detail-archive-actions"><h3>Spiel entfernen</h3><p>Archivieren blendet das Spiel aus, ohne Bewertungen, Besitz oder Kommentare zu löschen. Unter Einstellungen kannst du es wiederherstellen.</p><button class="btn ghost archive-btn" data-action="archive-game">Spiel aus Katalog entfernen</button></div></details>`:''}
  </section>`;
  return pageShell(`<main class="detail detail-v17 detail-v18">
  <div class="detail-v17-top"><button class="back" data-action="go" data-screen="catalog">‹ Alle Spiele</button>${g.release_status==='upcoming'?`<button class="back release-back" data-action="go" data-screen="upcoming">◷ Release-Radar</button>`:''}</div>
@@ -527,7 +530,45 @@ function add(){return pageShell(`<main class="detail"><button class="back" data-
 function membersPage(){return pageShell(`<main><div class="intro"><h1>Mitglieder</h1><p>Private Gruppe · ${members().length} Mitglieder</p></div><div class="panel"><h2>Eure Gruppe</h2>${members().map(m=>`<button class="member-link" data-action="open-profile" data-id="${m.user_id}">${avatar(m.profile,'medium')}<span><strong>${esc(m.profile?.display_name||'Mitglied')}</strong><small>${esc(m.profile?.initials)} · ${m.role==='admin'?'Administrator':'Mitglied'}</small></span><b>›</b></button>`).join('')}</div>${st.data.role==='admin'?`<div class="panel"><h2>Aufgaben zuweisen</h2><p class="hint">Die Empfänger sehen diese Aufgaben unter Einstellungen → Dein Einstieg.</p><form id="assign-task-form"><label>Mitglied<select name="userId" required>${members().map(m=>`<option value="${m.user_id}">${esc(m.profile?.display_name||'Mitglied')}</option>`).join('')}</select></label><label>Aufgabe<select name="taskType"><option value="steam_library">Steam-Bibliothek freigeben</option><option value="hardware">PC-Hardware eintragen</option><option value="profile">Profilbild ergänzen</option><option value="custom">Eigene Aufgabe</option></select></label><label>Zusatzinfo (optional)<input name="note" maxlength="650" placeholder="z. B. vor der nächsten LAN"></label><label>Eigener Titel (bei eigener Aufgabe)<input name="customTitle" maxlength="150" placeholder="z. B. Mikrofon testen"></label><button class="btn ghost full" type="submit">Aufgabe zuweisen</button></form><div class="task-list-admin">${(st.data.tasks||[]).map(t=>`<div class="task-line"><span>${esc(st.data.profiles.find(p=>p.user_id===t.assigned_to)?.initials||'?')} · ${esc(t.title)}</span><small>${t.status==='done'?'✓ Erledigt':'Offen'}</small></div>`).join('')}</div></div>`:''}${st.data.role==='admin'?`<div class="panel"><h2>Mitglied einladen</h2><p class="hint">Einladungscode 7 Tage gültig, maximal 3 Verwendungen. Nur eingeloggte Benutzer können beitreten.</p><button class="btn primary full" data-action="invite">Einladungslink erstellen</button><div id="invite-result"></div></div>`:''}<div class="panel"><h2>Mein Konto</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function profilePage(){const profile=st.data.profiles.find(p=>p.user_id===st.profileId);if(!profile){st.screen='members';return membersPage()}const its=st.data.ownership.filter(o=>o.user_id===st.profileId&&o.status==='yes').map(o=>st.data.games.find(g=>g.id===o.game_id)).filter(Boolean);const my=st.data.ownership.filter(o=>o.user_id===st.data.userId&&o.status==='yes').map(o=>o.game_id);const overlap=its.filter(g=>my.includes(g.id));const ratings=st.data.ratings.filter(r=>r.user_id===st.profileId);const mine=st.profileId===st.data.userId;
  return pageShell(`<main class="detail"><button class="back" data-action="go" data-screen="members">‹ Zurück zu Mitglieder</button><div class="profile-head">${avatar(profile,'large')}<div><h1>${esc(profile.display_name)}</h1><span class="tag">${esc(profile.initials)}</span></div></div>${hardwarePanel(profile.user_id,mine)}${mine?`<div class="panel"><h2>Mein Profil bearbeiten</h2><form id="profile-form"><label>Name<input name="displayName" value="${esc(profile.display_name)}" minlength="2" maxlength="60" required></label><label>Kürzel<input name="initials" value="${esc(profile.initials)}" maxlength="3" required></label><button type="submit" class="btn ghost full">Änderungen speichern</button></form><form id="avatar-form"><label>Profilbild auswählen<input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required></label><button class="btn ghost full" type="submit">Profilbild hochladen</button></form></div>`:''}<div class="panel"><h2>Spiele von ${esc(profile.initials)} <span class="muted">(${its.length})</span></h2>${its.length?`<div class="tile-grid">${its.slice(0,16).map(g=>`<button class="tile" data-action="open-game" data-id="${g.id}">${cover(g)}<strong>${esc(g.title)}</strong></button>`).join('')}</div>`:`<p class="hint">Noch keine bestätigten Besitztitel.</p>`}</div>${!mine?`<div class="panel"><h2>Gemeinsam mit mir (${overlap.length})</h2><p class="hint">Besitz-Schnittmenge, keine automatische Garantie für Crossplay.</p>${overlap.map(g=>`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} ›</button>`).join('')||'<p class="hint">Noch keine bestätigte Überschneidung.</p>'}</div>`:''}<div class="panel"><h2>Bewertungen (${ratings.length})</h2>${ratings.length?ratings.map(r=>{const g=st.data.games.find(g=>g.id===r.game_id);return g?`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} <strong>${r.rating}/10</strong></button>`:''}).join(''):'<p class="hint">Noch keine Bewertungen.</p>'}</div></main>`)}
-function settingsPage(){return pageShell(`<main class="detail"><h1>Einstellungen</h1><p class="hint" aria-label="Installierte App-Version">App-Version ${APP_VERSION} · automatische Updates aktiv</p>${onboardingCard()}<div class="panel"><h2>Auf iPhone / Android installieren</h2>${installInstructions()}<p class="hint">Updates werden automatisch installiert und beim nächsten sicheren Moment geladen. Während du ein Formular bearbeitest, wird nicht unterbrochen.</p></div>${steamConnectionCard()}${st.data.role==='admin'?`<div class="panel archive-manager"><h2>Archivierte Spiele <span class="archive-pill">${archivedGames().length}</span></h2><p>Ausgeblendete Spiele sind nicht gelöscht. Bewertungen, Besitzstände und Kommentare bleiben erhalten.</p>${archivedGames().length?archivedGames().map(g=>`<div class="archive-row"><span>${esc(g.title)}</span><button class="btn ghost" data-action="restore-game" data-id="${g.id}">Wiederherstellen</button></div>`).join(''):'<p class="hint">Keine archivierten Spiele.</p>'}</div>`:''}<div class="panel"><h2>Mein Konto</h2><p class="hint">Profilbild, Anzeigename und Kürzel bearbeiten.</p><button class="btn primary full" data-action="open-profile" data-id="${st.data.userId}">Mein Profil bearbeiten</button></div><div class="panel"><h2>Mitglieder</h2><button class="btn ghost full" data-action="go" data-screen="members">Gruppenmitglieder ansehen</button></div><div class="panel"><h2>Steam-Preise & Bewertungen</h2><p class="hint">Beim Öffnen durch einen Admin prüft die App fällige Steam-Daten automatisch im Hintergrund. Preis- und Angebotsdaten werden frühestens nach 24 Stunden aktualisiert, Bewertungen nach sieben Tagen. Angebote werden im Katalog markiert; auf neue Rabatte für noch nicht besessene Spiele wird in der App hingewiesen. Eine Benachrichtigung bei geschlossener App ist noch nicht eingerichtet.</p><p class="hint">Steam-Wertungen werden als positive Stimmen in Prozent und Preise als aktuelle Momentaufnahme gespeichert. Beide Daten werden automatisch abgeglichen. Spiele außerhalb von Steam haben möglicherweise keine Wertung.</p>${st.data.role==='admin'?`<button class="btn ghost full" data-action="sync-reviews">Steam-Preise und Bewertungen aktualisieren</button>${st.steamLastResult?`<p class=\"hint\" style=\"overflow-wrap:anywhere\">${esc(st.steamLastResult)}</p>`:''}`:''}</div><div class="panel"><h2>Anmeldung</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
+
+function adminMetadataIssues(g){
+ const issues=[];
+ if(!g.steam_app_id&&!g.reference_url)issues.push('Keine Steam-ID / alternative Quelle');
+ if(g.release_status==='unverified')issues.push('Edition oder Release unklar');
+ if(g.hardware_tier==null)issues.push('Hardware-Stufe fehlt');
+ if(!String(g.description||'').trim())issues.push('Beschreibung fehlt');
+ if(g.release_status==='available'&&(!Array.isArray(g.modes)||!g.modes.length))issues.push('Mehrspielerangaben prüfen');
+ return issues;
+}
+function adminMaintenanceCard(){
+ if(st.data.role!=='admin')return '';
+ const entries=allGames().map(game=>({game,issues:adminMetadataIssues(game)})).filter(item=>item.issues.length);
+ const undecided=(st.data.candidates||[]).filter(x=>x.review_status==='needs_review'&&!x.linked_game_id);
+ return `<div class="panel admin-maintenance"><h2>Admin-To-dos <span class="tag warn">${entries.length+undecided.length} offen</span></h2>
+ <p class="hint">Automatisch aus fehlenden oder ungeklärten Metadaten ermittelt. Das sind Prüfhinweise, keine als sicher bestätigten Fehler. Die Einträge bleiben bestehen, bis du die Daten ergänzt.</p>
+ <details><summary>Spiele zur Nachpflege (${entries.length})</summary><div class="maintenance-list">${entries.length?entries.map(({game,issues})=>`<div class="maintenance-row"><span><strong>${esc(game.title)}</strong><small>${esc(issues.join(' · '))}</small></span><button type="button" class="btn ghost" data-action="admin-edit-game" data-id="${game.id}">Bearbeiten</button></div>`).join(''):'<p class="hint">Alle Katalogspiele sind ausreichend gepflegt.</p>'}</div></details>
+ ${undecided.length?`<details><summary>Ursprungsliste / Editionszuordnung (${undecided.length})</summary><div class="maintenance-list">${undecided.map(x=>`<div class="maintenance-row"><span><strong>${esc(x.suggested_title||x.original_title)}</strong><small>${esc(x.review_note||'Edition oder Eintrag prüfen')}</small></span></div>`).join('')}</div><p class="hint">Diese Kandidaten liegen außerhalb des regulären Spielekatalogs. Zum Zuordnen erst den richtigen Titel im Katalog bestimmen.</p></details>`:''}</div>`;
+}
+function adminGameDataEditor(g){
+ if(st.data.role!=='admin')return '';
+ const value=v=>esc(v??'');
+ return `<div class="panel admin-data-editor"><details><summary>Spieldaten und Hardware-Stufe manuell pflegen</summary>
+ <form id="admin-data-form" data-game="${g.id}"><label>Spielname / Edition<input name="title" minlength="2" maxlength="130" required value="${value(g.title)}"></label>
+ <label>Steam-App-ID (optional)<input name="steam" type="number" min="1" step="1" value="${value(g.steam_app_id)}" placeholder="Bei Nicht-Steam-Spielen leer lassen"></label>
+ <label>Alternative Quelle / Versionsnachweis (optional)<input name="referenceUrl" type="url" maxlength="600" value="${value(g.reference_url)}" placeholder="https://..."></label>
+ <label>Genre (optional)<input name="genre" value="${value(g.genre)}"></label>
+ <label>Veröffentlichungs-/Editionsstatus<select name="releaseStatus">${[['available','Erhältlich / Edition bestätigt'],['upcoming','Noch nicht veröffentlicht'],['unverified','Edition ungeklärt']].map(([k,label])=>`<option value="${k}" ${g.release_status===k?'selected':''}>${label}</option>`).join('')}</select></label>
+ <label>Statushinweis / Edition (optional)<input name="releaseLabel" maxlength="140" value="${value(g.release_label)}" placeholder="z. B. Erweiterung 1.8, Edition offen"></label>
+ <label>Mehrspieler-Angaben<select name="modeEdit"><option value="keep">Bestehende Angaben unverändert</option>${[['coop_pve','Koop / PvE'],['team_pvp','Team PvP'],['versus','Versus'],['ffa','Free for all'],['other_multi','Sonstiger Multiplayer'],['clear','Multiplayer noch ungeklärt']].map(([k,label])=>`<option value="${k}">${label}</option>`).join('')}</select></label>
+ <div class="form-two"><label>Max. menschliche Spieler<input name="maxPlayers" type="number" min="2" max="100" value="${Number(g.modes?.[0]?.maxHumans)||4}"></label><label>Max. gleiches Team<input name="teamPlayers" type="number" min="1" max="100" value="${Number(g.modes?.[0]?.sameTeamMax)||3}"></label></div>
+ <label class="check-row"><input type="checkbox" name="privateSession" ${g.modes?.[0]?.privateSession===true?'checked':''}> Private Partie für eure Gruppe möglich</label>
+ <label>Beschreibung (optional)<textarea name="description" maxlength="5000">${value(g.description)}</textarea></label>
+ <label>Hardware-Leistungsindex<select name="hardware"><option value="">Unbekannt / noch zu prüfen</option>${[1,2,3,4,5].map(t=>`<option value="${t}" ${g.hardware_tier===t?'selected':''}>${t} – ${{1:'Sehr gering',2:'Gering',3:'Mittel',4:'Hoch',5:'Sehr hoch'}[t]}</option>`).join('')}</select></label>
+ <p class="hint">Manuelle Einstufung hat Vorrang. Kein automatisches Überschreiben durch Steam; nur bestätigte Angaben eintragen.</p>
+ <button class="btn primary full" type="submit">Änderungen speichern</button></form></details></div>`;
+}
+
+function settingsPage(){return pageShell(`<main class="detail"><h1>Einstellungen</h1><p class="hint" aria-label="Installierte App-Version">App-Version ${APP_VERSION} · automatische Updates aktiv</p>${onboardingCard()}${adminMaintenanceCard()}<div class="panel"><h2>Auf iPhone / Android installieren</h2>${installInstructions()}<p class="hint">Updates werden automatisch installiert und beim nächsten sicheren Moment geladen. Während du ein Formular bearbeitest, wird nicht unterbrochen.</p></div>${steamConnectionCard()}${st.data.role==='admin'?`<div class="panel archive-manager"><h2>Archivierte Spiele <span class="archive-pill">${archivedGames().length}</span></h2><p>Ausgeblendete Spiele sind nicht gelöscht. Bewertungen, Besitzstände und Kommentare bleiben erhalten.</p>${archivedGames().length?archivedGames().map(g=>`<div class="archive-row"><span>${esc(g.title)}</span><button class="btn ghost" data-action="restore-game" data-id="${g.id}">Wiederherstellen</button></div>`).join(''):'<p class="hint">Keine archivierten Spiele.</p>'}</div>`:''}<div class="panel"><h2>Mein Konto</h2><p class="hint">Profilbild, Anzeigename und Kürzel bearbeiten.</p><button class="btn primary full" data-action="open-profile" data-id="${st.data.userId}">Mein Profil bearbeiten</button></div><div class="panel"><h2>Mitglieder</h2><button class="btn ghost full" data-action="go" data-screen="members">Gruppenmitglieder ansehen</button></div><div class="panel"><h2>Steam-Preise & Bewertungen</h2><p class="hint">Beim Öffnen durch einen Admin prüft die App fällige Steam-Daten automatisch im Hintergrund. Preis- und Angebotsdaten werden frühestens nach 24 Stunden aktualisiert, Bewertungen nach sieben Tagen. Angebote werden im Katalog markiert; auf neue Rabatte für noch nicht besessene Spiele wird in der App hingewiesen. Eine Benachrichtigung bei geschlossener App ist noch nicht eingerichtet.</p><p class="hint">Steam-Wertungen werden als positive Stimmen in Prozent und Preise als aktuelle Momentaufnahme gespeichert. Beide Daten werden automatisch abgeglichen. Spiele außerhalb von Steam haben möglicherweise keine Wertung.</p>${st.data.role==='admin'?`<button class="btn ghost full" data-action="sync-reviews">Steam-Preise und Bewertungen aktualisieren</button>${st.steamLastResult?`<p class=\"hint\" style=\"overflow-wrap:anywhere\">${esc(st.steamLastResult)}</p>`:''}`:''}</div><div class="panel"><h2>Anmeldung</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function hardwarePanel(userId,mine){
  const h=(st.data.hardware||[]).find(x=>x.user_id===userId);
  const val=(name)=>esc(h?.[name]??'');
@@ -566,7 +607,17 @@ function showToast(msg){
  const node=document.createElement('div');node.className='toast';node.textContent=String(msg);
  document.body.append(node);setTimeout(()=>node.remove(),3500);
 }
-function render(){if(st.loading){app.innerHTML='<main class="boot">LAN Library lädt …</main>';return}if(!DEMO&&!st.user){app.innerHTML=authScreen();return}if(!DEMO&&!st.membership){app.innerHTML=joinScreen();return}if(!st.data){app.innerHTML='<main class="boot">Daten werden geladen …</main>';return}app.innerHTML=({catalog,upcoming,detail,members:membersPage,profile:profilePage,calendar,add,settings:settingsPage}[st.screen]||catalog)();}
+let lastHistoryRoute=null;let restoringHistory=false;
+const historyRoute=()=>({screen:st.screen,gameId:st.gameId||null,profileId:st.profileId||null});
+const sameHistoryRoute=(a,b)=>a&&b&&a.screen===b.screen&&a.gameId===b.gameId&&a.profileId===b.profileId;
+function syncPageHistory(){
+ const route=historyRoute();
+ if(!lastHistoryRoute){history.replaceState({...history.state,lanLibraryRoute:route},'',location.href);lastHistoryRoute=route;return}
+ if(restoringHistory){lastHistoryRoute=route;return}
+ if(!sameHistoryRoute(route,lastHistoryRoute)){history.pushState({lanLibraryRoute:route},'',location.href);lastHistoryRoute=route}
+}
+window.addEventListener('popstate',e=>{const route=e.state?.lanLibraryRoute;if(!route||!st.data)return;restoringHistory=true;st.screen=route.screen;st.gameId=route.gameId;st.profileId=route.profileId;st.menu=null;st.detailTab='overview';render();restoringHistory=false;scrollTo(0,0)});
+function render(){if(st.data&&st.user)syncPageHistory();if(st.loading){app.innerHTML='<main class="boot">LAN Library lädt …</main>';return}if(!DEMO&&!st.user){app.innerHTML=authScreen();return}if(!DEMO&&!st.membership){app.innerHTML=joinScreen();return}if(!st.data){app.innerHTML='<main class="boot">Daten werden geladen …</main>';return}app.innerHTML=({catalog,upcoming,detail,members:membersPage,profile:profilePage,calendar,add,settings:settingsPage}[st.screen]||catalog)();}
 async function load(){st.data=await repo.load();st.membership=repo.membership||null;st.user=repo.user;await loadAvatars();render()}
 let releaseCheckRunning=false;
 async function syncUpcoming(manual=false){
@@ -611,6 +662,8 @@ async function execute(a,el){switch(a){
  case 'confirm-date':{const option=st.data.dateOptions.find(o=>o.id===el.dataset.id),ev=st.data.events.find(e=>e.id===option?.event_id);if(!option||!ev||ev.status!=='polling')throw Error('Terminvorschlag nicht gefunden');await repo.confirmEvent(ev.id,option);await load();showToast('LAN-Termin bestätigt.');return}
  case 'reload':location.reload();return;
  case 'sync-reviews':await syncSteamReviews(true);return;
+  case 'toggle-hardware-badges':st.showHardware=!st.showHardware;try{localStorage.setItem('lan-show-hardware',st.showHardware?'1':'0')}catch{}render();return;
+  case 'admin-edit-game':st.gameId=el.dataset.id;st.detailTab='more';st.screen='detail';render();scrollTo(0,0);return;
  case 'go':st.screen=el.dataset.screen;st.menu=null;st.openedChoice=null;if(st.screen==='catalog')st.detailTab='overview';render();scrollTo(0,0);return;
  case 'release-mine':st.releaseMine=!st.releaseMine;render();return;
  case 'dismiss-release':{const g=st.data.games.find(x=>x.id===el.dataset.id);if(g){const key=releaseNoticeStorageKey(g,el.dataset.kind);dismissedReleaseNotices.add(key);try{localStorage.setItem(key,'1')}catch{}}render();return;}
@@ -674,7 +727,7 @@ document.addEventListener('error',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='steam-search'){e.preventDefault();execute('steam-search',e.target);return;}if((e.key==='Enter'||e.key===' ')&&['game-card','game-list-row'].some(c=>e.target.classList?.contains(c))){e.preventDefault();execute('open-game',e.target)}});
 document.addEventListener('input',e=>{if(e.target.id==='steam-search'){st.steamQuery=e.target.value;return;}if(e.target.id==='wish-search'){st.wishSearch=e.target.value;const ev=(st.data.events||[]).find(x=>x.id===st.eventId)||st.data.events?.[0];const node=document.getElementById('wish-games');if(ev&&node)node.innerHTML=wishRows(ev.id);return;}if(e.target.id==='search'){st.search=e.target.value;const gs=displayGames();const cards=document.querySelector('#cards');if(cards)cards.innerHTML=gs.map(st.viewMode==='compact'?listRow:gameCard).join('')||'<div class="empty">Keine passenden Spiele. Filter anpassen oder zurücksetzen.</div>';const count=document.querySelector('#result-count');if(count)count.textContent=gs.length+(activeFilterCount(st.filters)>0?' Treffer':' Spiele')}});
 document.addEventListener('change',e=>{if(e.target.dataset.filterCheck){st.filters[e.target.dataset.filterCheck]=e.target.checked;render()}});
-document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','join-form','game-form','comment-form','profile-form','avatar-form','hardware-form','event-form','option-form','classification-form','steam-library-form','assign-task-form'].includes(f.id)&&!f.classList.contains('release-date-form'))return;e.preventDefault();const d=Object.fromEntries(new FormData(f));try{
+document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','join-form','game-form','comment-form','profile-form','avatar-form','hardware-form','event-form','option-form','classification-form','admin-data-form','steam-library-form','assign-task-form'].includes(f.id)&&!f.classList.contains('release-date-form'))return;e.preventDefault();const d=Object.fromEntries(new FormData(f));try{
  if(f.id==='steam-library-form'){st.steamOwnershipMessage='Steam-Besitz wird abgefragt …';render();try{const result=await repo.importSteamLibrary(String(d.steamProfile||''));st.steamOwnershipMessage=`${result.updated} deiner Spiele bestätigt · ${result.libraryCount} Steam-Titel geprüft. Nicht gefundene Spiele bleiben unbekannt.`;await load();showToast('Steam-Bibliothek importiert.');}catch(e){st.steamOwnershipMessage=e.message;render();}return;}
  if(f.classList.contains('release-date-form')){
   const game=st.data.games.find(g=>g.id===f.dataset.game);
@@ -685,7 +738,21 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','
   await load();showToast('Release-Termin gespeichert.');return;
  }
  if(f.id==='assign-task-form'){const taskType=String(d.taskType),labels={steam_library:'Steam-Bibliothek freigeben',hardware:'PC-Hardware eintragen',profile:'Profilbild ergänzen'};const title=taskType==='custom'?String(d.customTitle||'').trim():labels[taskType];if(title.length<3)throw Error('Bitte einen aussagekräftigen Aufgabentitel angeben.');await repo.assignTask(d.userId,taskType,title,String(d.note||'').trim());await load();showToast('Aufgabe zugewiesen.');return;}
- if(f.id==='classification-form'){const fd=new FormData(f),fields={category_genres:fd.getAll('genres').map(String),category_mechanics:fd.getAll('mechanics').map(String),category_themes:(st.data?.games.find(g=>g.id===f.dataset.game)?.category_themes||[])};await repo.updateGameClassification(f.dataset.game,fields);await load();showToast('Spiel-Kategorien gespeichert.');return;}
+  if(f.id==='admin-data-form'){
+    if(st.data.role!=='admin')throw Error('Nur Administratoren dürfen Spieldaten ändern.');
+    const game=st.data.games.find(x=>x.id===f.dataset.game);if(!game)throw Error('Spiel nicht gefunden.');
+    const steam=String(d.steam||'').trim();if(steam&&!/^[0-9]{2,10}$/.test(steam))throw Error('Steam-ID ungültig.');
+    const title=String(d.title||'').trim();if(title.length<2||title.length>130)throw Error('Ungültiger Spielname.');
+    if(steam&&game.steam_app_id&&String(game.steam_app_id)!==steam&&!confirm('Bestehende Steam-App-ID ändern? Dadurch ändert sich auch der Steam-Link.'))return;
+    const fields={title,steam_app_id:steam?Number(steam):null,reference_url:String(d.referenceUrl||'').trim()||null,genre:String(d.genre||'').trim()||null,description:String(d.description||'').trim()||null,hardware_tier:d.hardware?Number(d.hardware):null,release_status:String(d.releaseStatus||game.release_status),release_label:String(d.releaseLabel||'').trim().slice(0,140)||null};
+    if(d.modeEdit&&d.modeEdit!=='keep'){
+      if(d.modeEdit==='clear'){fields.modes=[];fields.multiplayer_status='unknown'}
+      else{const max=Number(d.maxPlayers),team=Number(d.teamPlayers);if(!Number.isInteger(max)||max<2||max>100||!Number.isInteger(team)||team<1||team>max)throw Error('Bitte gültige Spielerzahlen eintragen.');
+        fields.modes=[{type:d.modeEdit,maxHumans:max,sameTeamMax:team,minHumans:1,botsCanFill:false,privateSession:!!d.privateSession}];fields.multiplayer_status='confirmed';}
+    }
+    await repo.updateGameMetadata(game.id,fields);await load();showToast('Spieldaten aktualisiert.');return;
+  }
+  if(f.id==='classification-form'){const fd=new FormData(f),fields={category_genres:fd.getAll('genres').map(String),category_mechanics:fd.getAll('mechanics').map(String),category_themes:(st.data?.games.find(g=>g.id===f.dataset.game)?.category_themes||[])};await repo.updateGameClassification(f.dataset.game,fields);await load();showToast('Spiel-Kategorien gespeichert.');return;}
  if(f.id==='hardware-form'){
    await repo.setHardware({cpu_model:d.cpu.trim(),gpu_model:d.gpu.trim(),ram_gb:Number(d.ram),vram_gb:d.vram?Number(d.vram):null,resolution_width:Number(d.width),resolution_height:Number(d.height),target_fps:Number(d.fps),preset:d.preset});
    await load();showToast('Hardwareprofil gespeichert.');return;
@@ -726,12 +793,18 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','
  if(f.id==='avatar-form'){const file=f.querySelector('input[type=file]').files?.[0];if(!file)throw Error('Bitte ein Bild auswählen.');if(file.size>8*1024*1024)throw Error('Bild zu groß. Maximal 8 MB.');const img=await createImageBitmap(file);const cv=document.createElement('canvas');cv.width=cv.height=256;const ctx=cv.getContext('2d');const side=Math.min(img.width,img.height);ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,256,256);img.close?.();const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.82));await repo.uploadAvatar(blob);st.avatarUrls={};await load();showToast('Profilbild gespeichert.');return}
  }catch(err){showToast(err.message)}});
 async function init(){try{st.loading=true;render();if(DEMO){st.user=repo.user;st.membership=repo.membership;st.data=await repo.load();}else{st.user=await repo.restore();if(st.user){st.membership=await repo.groupForUser();if(st.membership){st.data=await repo.load();await loadAvatars();}}}st.loading=false;render();if(!DEMO){if(st.data?.role==='admin')setTimeout(()=>syncSteamReviews(false),1700);setTimeout(()=>syncUpcoming(false),2100);setInterval(()=>{if(!document.hidden&&st.data){syncUpcoming(false);if(st.data.role==='admin')syncSteamReviews(false)}},3600000);setInterval(async()=>{if(document.hidden||!st.user||!st.membership)return;try{const saved=st.screen;st.data=await repo.load();if(['catalog','upcoming','detail','members','profile','settings','calendar'].includes(saved)&&!document.querySelector('input:focus, textarea:focus'))render()}catch{}},15000)}}catch(err){st.loading=false;app.innerHTML=`<div class="auth-wrap"><div class="auth-card"><h2>Start fehlgeschlagen</h2><p>${esc(err.message)}</p><button class="btn" data-action="reload">Erneut versuchen</button></div></div>`}}
-// Reliable update path: no persistent stale form flag, independently verifies the
-// deployed HTML build (cache-busted), and refreshes only when no current form is dirty.
+// Conservative update handling: reload only when a NEWER complete HTML build
+// is deployed. Prevent reload loops during partial uploads and preserve login.
 if('serviceWorker' in navigator&&['https:','http:'].includes(location.protocol)){
  let updatePending=false,registered=null,hadController=!!navigator.serviceWorker.controller;
- let checking=false,lastChecked=0,lastReloadAttempt=0;
+ let pendingVersion='',checking=false,lastChecked=0;
  const dirtyForms=new WeakSet();
+ const newerBuild=(remote,local)=>{
+  const parse=s=>String(s).split('.').map(v=>Number(v));
+  const a=parse(remote),b=parse(local);
+  return a.length===3&&b.length===3&&a.every(Number.isInteger)&&b.every(Number.isInteger)&&
+   (a[0]>b[0]||(a[0]===b[0]&&(a[1]>b[1]||(a[1]===b[1]&&a[2]>b[2]))));
+ };
  const safeToReload=()=>{
   const focused=document.activeElement;
   const editing=!!focused?.matches?.('input,textarea,select,[contenteditable="true"]');
@@ -739,12 +812,15 @@ if('serviceWorker' in navigator&&['https:','http:'].includes(location.protocol))
   return !document.hidden&&!editing&&!unsaved;
  };
  const tryAutoUpdate=()=>{
-  if(!updatePending||!safeToReload()||Date.now()-lastReloadAttempt<12000)return;
-  lastReloadAttempt=Date.now();
+  if(!updatePending||!pendingVersion||!safeToReload())return;
+  const key='lan-lib-reload-attempt:'+pendingVersion;
+  const now=Date.now();let last=0;
+  try{last=Number(sessionStorage.getItem(key)||0)}catch{}
+  if(now-last<90000)return; // never an endless refresh/relogin cycle
+  try{sessionStorage.setItem(key,String(now))}catch{}
   updatePending=false;
-  // Force a fresh navigation, not a previously cached document with a stale module URL.
   const next=new URL(location.href);
-  next.searchParams.set('app-build',String(Date.now()));
+  next.searchParams.set('app-build',pendingVersion);
   location.replace(next.href);
  };
  const checkServerVersion=async(force=false)=>{
@@ -756,22 +832,28 @@ if('serviceWorker' in navigator&&['https:','http:'].includes(location.protocol))
    const response=await fetch(url.href,{cache:'no-store',redirect:'follow'});
    if(!response.ok)return;
    const html=await response.text();
-   const found=html.match(/<meta\s+name=["']app-version["']\s+content=["']([0-9.]+)["']/i);
-   if(found && found[1]!==APP_VERSION){updatePending=true;tryAutoUpdate()}
+   const match=html.match(/<meta\s+name=["']app-version["']\s+content=["']([0-9.]+)["']/i);
+   if(!match)return;
+   if(newerBuild(match[1],APP_VERSION)){pendingVersion=match[1];updatePending=true;tryAutoUpdate();}
+   else {updatePending=false;pendingVersion='';}
   }catch{}finally{checking=false}
  };
  navigator.serviceWorker.addEventListener('controllerchange',()=>{
-  if(!hadController){hadController=true;return}
-  updatePending=true;tryAutoUpdate();
+  if(!hadController){hadController=true;return;}
+  // A new service worker can be an asset-only hotfix; check build before reload.
+  checkServerVersion(true);
  });
  document.addEventListener('input',e=>{const f=e.target.closest?.('form');if(f)dirtyForms.add(f)},true);
  document.addEventListener('submit',e=>{dirtyForms.delete(e.target);setTimeout(tryAutoUpdate,750)},true);
  document.addEventListener('focusout',()=>{if(updatePending)setTimeout(tryAutoUpdate,400)},true);
- document.addEventListener('visibilitychange',()=>{if(!document.hidden){registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate()}});
- window.addEventListener('pageshow',()=>{registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate()});
- navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{registered=reg;reg.update().catch(()=>{});setTimeout(()=>checkServerVersion(true),1300)}).catch(()=>{setTimeout(()=>checkServerVersion(true),1300)});
- setInterval(()=>{if(!document.hidden){registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate()}},15*60*1000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate();}});
+ window.addEventListener('pageshow',()=>{registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate();});
+ navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
+  registered=reg;reg.update().catch(()=>{});setTimeout(()=>checkServerVersion(true),1300);
+ }).catch(()=>{setTimeout(()=>checkServerVersion(true),1300)});
+ setInterval(()=>{if(!document.hidden){registered?.update().catch(()=>{});checkServerVersion(true);tryAutoUpdate();}},15*60*1000);
 }
+
 
 
 init();
