@@ -753,3 +753,33 @@ select{min-height:44px;width:100%;padding:10px 12px;background:#0c2234;border:1p
 .header{height:calc(106px + var(--header-safe-top));padding-top:var(--header-safe-top)}
 @media(max-width:900px){.header{height:calc(80px + var(--header-safe-top))}}
 @media(max-width:520px){.header{height:calc(73px + var(--header-safe-top))}}
+
+
+/* LAN Library 1.9.5: understated titles, hardware index and discovery highlighting. */
+.game-card .card-title-line h3,.game-list-row .list-title{
+  letter-spacing:.038em;color:#d9e6ed;font-weight:760;
+  text-shadow:0 1px 7px rgba(0,0,0,.24)
+}
+.game-image,.list-cover{position:relative}
+.hardware-tier-bubble{position:absolute;right:9px;top:9px;z-index:4;width:30px;height:30px;
+  display:grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 2px 12px rgba(0,0,0,.6);font-size:16px;font-weight:800;color:#fff;
+  background:#687884;pointer-events:none;text-shadow:0 1px 1px #0007}
+.hardware-tier-bubble.tier-1{background:#25885b}.hardware-tier-bubble.tier-2{background:#7dab44}
+.hardware-tier-bubble.tier-3{background:#baa03c}.hardware-tier-bubble.tier-4{background:#d38133}
+.hardware-tier-bubble.tier-5{background:#c94d50}
+.game-card.unowned-game,.game-list-row.unowned-game{border-color:rgba(117,206,172,.64)!important;
+  box-shadow:0 0 0 1px rgba(77,195,152,.16),0 8px 25px rgba(0,0,0,.22)}
+.tag.fresh-tag,.fresh-inline{color:#b8e9d4;border:1px solid #4e9e7a55;
+  border-radius:8px;background:#16453465;font-size:11px;font-weight:800;letter-spacing:.035em;padding:4px 7px}
+.fresh-inline{display:inline-flex;margin:4px 0;width:max-content}
+.hardware-visibility{font-size:19px;font-weight:850;letter-spacing:.02em;min-width:41px}
+.admin-maintenance details{margin-top:14px}
+.maintenance-list{max-height:440px;overflow:auto;margin:12px 0;display:grid;gap:6px}
+.maintenance-row{display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:10px 4px;border-bottom:1px solid rgba(155,198,222,.15)}
+.maintenance-row span{min-width:0;flex:1}.maintenance-row small{display:block;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+.maintenance-row .btn{flex:none;padding:9px 12px;font-size:13px;min-height:38px}
+.admin-data-editor{margin:16px 0}.admin-data-editor form{margin-top:16px;display:grid;gap:12px}
+@media(max-width:420px){.hardware-tier-bubble{width:28px;height:28px;font-size:15px;right:5px;top:5px}
+  .game-card .card-title-line h3{letter-spacing:.022em}}
