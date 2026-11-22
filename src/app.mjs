@@ -1,8 +1,8 @@
-import {CloudRepository} from './repository.mjs?v=1.9.8';
-import {DemoRepository} from './demo.mjs?v=1.9.8';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.8';
+import {CloudRepository} from './repository.mjs?v=1.9.9';
+import {DemoRepository} from './demo.mjs?v=1.9.9';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.9';
 
-const APP_VERSION='1.9.8';
+const APP_VERSION='1.9.9';
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
@@ -34,7 +34,7 @@ function onboardingCard(){
  const steps=[['Profilbild',!!my.avatar_path,'open-profile'],['Steam-Bibliothek',!!my.steam_synced_at,'steam-start'],['PC-Hardware',!!(hardware?.cpu_model&&hardware?.gpu_model),'open-profile']];
  return `<div class="panel onboarding-panel"><h2>Dein Einstieg</h2><p class="hint">Die Einrichtung wird je Mitglied getrennt gespeichert. Nicht erledigte Punkte kannst du später ergänzen.</p>${steps.map(([label,done,action])=>`<button class="task-line" data-action="${action}" ${action==='open-profile'?`data-id="${st.data.userId}"`:''}><b>${done?'✓':'○'}</b><span>${label}</span><small>${done?'Erledigt':'Einrichten'} ›</small></button>`).join('')}${pending.length?`<h3>Aufgaben von der Gruppe</h3>${pending.map(t=>`<div class="task-line assigned-task"><span>${esc(t.title)}${t.note?`<small>${esc(t.note)}</small>`:''}</span><button class="task-done" data-action="task-done" data-id="${t.id}" aria-label="Aufgabe ${esc(t.title)} erledigt">Erledigt ✓</button></div>`).join('')}`:''}</div>`;
 }
-function steamConnectionCard(){const p=theUser()||{};const connected=!!p.steam_synced_at;return `<div class="panel"><h2>Meine Steam-Bibliothek</h2><p class="hint">Anders als Steam-Bewertungen ist die persönliche Besitzliste ein eigener Import. Verknüpfe dein öffentlich sichtbares Steam-Profil. Es werden nur vorhandene LAN-Spiele als „Steam“ markiert; andere bleiben unbekannt.</p>
+function steamConnectionCard(){const p=theUser()||{};const connected=!!p.steam_synced_at;return `<div class="panel"><h2>Meine Steam-Bibliothek</h2><p class="hint">Anders als Steam-Bewertungen ist die persönliche Besitzliste ein eigener Import. Verknüpfe dein öffentlich sichtbares Steam-Profil. Steam-Spiele werden bei vollstaendigem Abgleich als vorhanden oder nicht vorhanden markiert. Spiele ohne Steam-ID bleiben offen. Manuelle Besitzangaben haben Vorrang.</p>
  ${p.steam_id?`<p class="hint">SteamID64: ${esc(p.steam_id)}${connected?' · zuletzt synchronisiert: '+fmtDate(p.steam_synced_at):''}</p>`:''}
  <form id="steam-library-form"><label>Steam-Profillink oder SteamID64<input type="text" name="steamProfile" value="${esc(p.steam_id||'')}" placeholder="https://steamcommunity.com/id/DEINNAME/" maxlength="250" required></label><button class="btn primary full" type="submit">Steam-Spielebesitz importieren</button></form>
  <p class="hint">Voraussetzung: Steam → Profil bearbeiten → Privatsphäre → <b>Spieldetails: Öffentlich</b>. Für den Abruf muss der Gruppenadministrator einmalig einen Steam-Web-API-Schlüssel serverseitig einrichten. Steam-Passwörter werden niemals abgefragt.</p>${st.steamOwnershipMessage?`<p class="hint steam-import-status" role="status">${esc(st.steamOwnershipMessage)}</p>`:''}</div>`}
@@ -42,7 +42,22 @@ const theUser=()=>st.data?.profiles.find(p=>p.user_id===st.data.userId);
 const groupMembers=()=>st.data?.members||[];
 const allGames=()=>st.data?.games.filter(g=>!g.archived_at)||[]; // Published, upcoming, and undecided titles; archived remain intact in DB.
 const archivedGames=()=>st.data?.games.filter(g=>g.archived_at)||[];
-const owner=(gid,uid)=>st.data.ownership.find(o=>o.game_id===gid&&o.user_id===uid);
+// Vorher bekannte Eintraege (inkl. manueller Plattform-Kaeufe) haben Vorrang.
+// Nur nach einer erfolgreich abgeschlossenen Steam-Synchronisation darf ein
+// zum Synchronisationszeitpunkt vorhandenes Steam-Spiel ohne Treffer als
+// 'nicht in der Steam-Bibliothek' (= nein fuer die LAN-Besitzliste) gelten.
+// Neu hinzugefuegte Spiele bleiben bis zum naechsten Steam-Abgleich offen.
+const owner=(gid,uid)=>{
+ const actual=st.data.ownership.find(o=>o.game_id===gid&&o.user_id===uid);
+ if(actual)return actual;
+ const game=st.data.games.find(g=>g.id===gid);
+ if(!game||!Number.isSafeInteger(Number(game.steam_app_id))||Number(game.steam_app_id)<=0)return null;
+ const profile=st.data.profiles.find(p=>p.user_id===uid);
+ const synced=Date.parse(profile?.steam_synced_at||'');
+ const added=Date.parse(game.created_at||'');
+ if(!profile?.steam_id||!Number.isFinite(synced)||!Number.isFinite(added)||added>synced)return null;
+ return {game_id:gid,user_id:uid,status:'no',source:'steam_inferred'};
+};
 const rating=(gid,uid)=>st.data.ratings.find(o=>o.game_id===gid&&o.user_id===uid)?.rating??null;
 const confirmedOwner=(gid,uid)=>st.data.ownership.some(o=>o.game_id===gid&&o.user_id===uid&&o.status==='yes');
 const usableRating=(gid,uid)=>confirmedOwner(gid,uid)?rating(gid,uid):null;
@@ -326,7 +341,7 @@ const SCORE_PARTS=[
  ['ownershipAndPrice','Besitz + Preis'],['playWishes','LAN-Vormerkungen']
 ];
 function scoreExplanation(s){
- return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung bleibt 30/20/15/20/15. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt. Fehlt eine eigene Bewertung vollständig, nutzt die App vorläufig die Steam-Quote als Schätzung für den 30-%-Faktor. Nur ohne Steam-Daten bleibt der neutrale Platzhalter 5/10. Schätzungen werden nicht als eigene Stimmen gespeichert. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.estimated?`${f.estimatedValue} % (geschätzt) · ${f.partial} · ${f.points} Pkt.`:f?.partial?`${f.value??'?'} % · ${f.partial} · ${f.points} Pkt.`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.noveltyBonusPercent?`<p class="hint"><b>+10 % Neuentdeckungsbonus:</b> Kein Gruppenmitglied besitzt dieses Spiel (von allen explizit bestätigt). Vor Bonus: ${s.baseScore} Punkte. Maximal 100 Punkte.</p>`:''}${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Bei fehlender eigener Wertung ist Steam die vorläufige Schätzgrundlage. Eigentum, Preis, LAN-Eignung und Vormerkungen zählen weiterhin unabhängig. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Jedes Mitglied kann ein Spiel einmal für die LAN vormerken. Bei drei Mitgliedern entsprechen drei Vormerkungen dem vollen Wunsch-Faktor von 15 %. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
+ return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung bleibt 30/20/15/20/15. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt. Fehlt eine eigene Bewertung vollständig, nutzt die App vorläufig die Steam-Quote als Schätzung für den 30-%-Faktor. Nur ohne Steam-Daten bleibt der neutrale Platzhalter 5/10. Schätzungen werden nicht als eigene Stimmen gespeichert. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Stimmen eine eigene starke Wertung (ab 8,5/10) und Steam (ab 85 %) ueberein, kommen 3 Punkte als bestaetigtes Qualitaetssignal hinzu. Steam-Abgleich: vorhandene Spiele = Ja, fehlende Steam-Spiele = Nein; manuelle Angaben gehen vor. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.estimated?`${f.estimatedValue} % (geschätzt) · ${f.partial} · ${f.points} Pkt.`:f?.partial?`${f.value??'?'} % · ${f.partial} · ${f.points} Pkt.`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.reviewAgreementBonus?`<p class="hint"><b>+${s.reviewAgreementBonus} Punkte Bestaetigungsbonus:</b> Eigene Bewertung mindestens 8,5/10 und Steam-Wertung mindestens 85 %. Beide Quellen beurteilen dieses Spiel positiv.</p>`:''}${s.noveltyBonusPercent?`<p class="hint"><b>+10 % Neuentdeckungsbonus:</b> Kein Gruppenmitglied besitzt dieses Spiel (von allen explizit bestätigt). Vor Bonus: ${s.baseScore} Punkte. Maximal 100 Punkte.</p>`:''}${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Bei fehlender eigener Wertung ist Steam die vorläufige Schätzgrundlage. Eigentum, Preis, LAN-Eignung und Vormerkungen zählen weiterhin unabhängig. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Jedes Mitglied kann ein Spiel einmal für die LAN vormerken. Bei drei Mitgliedern entsprechen drei Vormerkungen dem vollen Wunsch-Faktor von 15 %. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
 }
 function fitFor(g){return groupFit(toCore(g),Math.max(3,groupMembers().length))}
 function avatar(profile,size='small'){const src=st.avatarUrls[profile?.user_id];return `<span class="avatar ${size}" title="${esc(profile?.display_name||'Mitglied')}">${src?`<img src="${esc(src)}" alt="">`:`<span>${esc(profile?.initials||'?')}</span>`}</span>`}
@@ -831,7 +846,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='steam
 document.addEventListener('input',e=>{if(e.target.id==='steam-search'){st.steamQuery=e.target.value;return;}if(e.target.id==='wish-search'){st.wishSearch=e.target.value;const ev=(st.data.events||[]).find(x=>x.id===st.eventId)||st.data.events?.[0];const node=document.getElementById('wish-games');if(ev&&node)node.innerHTML=wishRows(ev.id);return;}if(e.target.id==='search'){st.search=e.target.value;const gs=displayGames();const cards=document.querySelector('#cards');if(cards)cards.innerHTML=gs.map(st.viewMode==='compact'?listRow:gameCard).join('')||'<div class="empty">Keine passenden Spiele. Filter anpassen oder zurücksetzen.</div>';const count=document.querySelector('#result-count');if(count)count.textContent=gs.length+(activeFilterCount(st.filters)>0?' Treffer':' Spiele')}});
 document.addEventListener('change',e=>{if(e.target.dataset.filterCheck){st.filters[e.target.dataset.filterCheck]=e.target.checked;render()}});
 document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','join-form','game-form','comment-form','profile-form','avatar-form','hardware-form','event-form','option-form','classification-form','admin-data-form','steam-library-form','assign-task-form'].includes(f.id)&&!f.classList.contains('release-date-form'))return;e.preventDefault();const d=Object.fromEntries(new FormData(f));try{
- if(f.id==='steam-library-form'){st.steamOwnershipMessage='Steam-Besitz wird abgefragt …';render();try{const result=await repo.importSteamLibrary(String(d.steamProfile||''));st.steamOwnershipMessage=`${result.updated} deiner Spiele bestätigt · ${result.libraryCount} Steam-Titel geprüft. Nicht gefundene Spiele bleiben unbekannt.`;await load();showToast('Steam-Bibliothek importiert.');}catch(e){st.steamOwnershipMessage=e.message;render();}return;}
+ if(f.id==='steam-library-form'){st.steamOwnershipMessage='Steam-Besitz wird abgefragt …';render();try{const result=await repo.importSteamLibrary(String(d.steamProfile||''));st.steamOwnershipMessage=`${result.updated} deiner Spiele bestätigt · ${result.libraryCount} Steam-Titel geprüft. Steam-Spiele ohne Treffer sind als ‚Nein‘ markiert; fremde Plattformen bleiben manuell aenderbar.`;await load();showToast('Steam-Bibliothek importiert.');}catch(e){st.steamOwnershipMessage=e.message;render();}return;}
  if(f.classList.contains('release-date-form')){
   const game=st.data.games.find(g=>g.id===f.dataset.game);
   if(!game||game.release_status!=='upcoming')throw Error('Spiel nicht mehr als angekündigt markiert.');

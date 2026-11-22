@@ -153,12 +153,18 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
   const notReleased=game.releaseStatus==='upcoming'||game.releaseStatus==='unverified';
   const usefulData=confidence.steamRating||confidence.groupSuitability||confidence.ownershipAndPrice||confidence.groupRating;
   const baseScore=notReleased||!usefulData?null:Math.round(weightedSum/allWeight*100);
+  // Kleiner, nur bei belegter Uebereinstimmung beider Quellen vergebener Bonus.
+  // Er soll echte sehr gute LAN-Erfahrung etwas staerker bestaetigen, ohne
+  // unbewertete Spiele pauschal abzuwerten (wie vor v1.9.8).
+  const reviewAgreementBonus=baseScore!==null && ratings.length>0 &&
+    factors.groupRating>=.85 && factors.steamRating>=.85 ? 3 : 0;
+  const scoreWithAgreement=baseScore===null?null:Math.min(100,baseScore+reviewAgreementBonus);
   // Neuentdeckungsbonus nur bei bei ALLEN Mitgliedern bestaetigtem Nichtbesitz.
   // Unbekannt ist kein Nichtbesitz; Hardware hat weiterhin keinerlei Einfluss.
   const undiscovered=baseScore!==null && !game.groupSharedAccess && memberIds.every(id=>game.ownership?.[id]===false);
-  const score=undiscovered?Math.min(100,Math.round(baseScore*1.10)):baseScore;
+  const score=undiscovered?Math.min(100,Math.round(scoreWithAgreement*1.10)):scoreWithAgreement;
   return {
-    score, baseScore, noveltyBonusPercent:undiscovered?10:0,
+    score, baseScore, reviewAgreementBonus, noveltyBonusPercent:undiscovered?10:0,
     provisional:coverage<.995||memberIds.length<expectedGroupSize||notReleased,
     coveragePercent:Math.round(coverage*100),
     factors:Object.fromEntries(Object.entries(factors).map(([key,value])=>[key,{
