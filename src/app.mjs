@@ -1,8 +1,8 @@
-import {CloudRepository} from './repository.mjs?v=1.9.9';
-import {DemoRepository} from './demo.mjs?v=1.9.9';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.9';
+import {CloudRepository} from './repository.mjs?v=1.9.11';
+import {DemoRepository} from './demo.mjs?v=1.9.11';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.11';
 
-const APP_VERSION='1.9.9';
+const APP_VERSION='1.9.11';
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
@@ -341,7 +341,7 @@ const SCORE_PARTS=[
  ['ownershipAndPrice','Besitz + Preis'],['playWishes','LAN-Vormerkungen']
 ];
 function scoreExplanation(s){
- return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung bleibt 30/20/15/20/15. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt. Fehlt eine eigene Bewertung vollständig, nutzt die App vorläufig die Steam-Quote als Schätzung für den 30-%-Faktor. Nur ohne Steam-Daten bleibt der neutrale Platzhalter 5/10. Schätzungen werden nicht als eigene Stimmen gespeichert. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Stimmen eine eigene starke Wertung (ab 8,5/10) und Steam (ab 85 %) ueberein, kommen 3 Punkte als bestaetigtes Qualitaetssignal hinzu. Steam-Abgleich: vorhandene Spiele = Ja, fehlende Steam-Spiele = Nein; manuelle Angaben gehen vor. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.estimated?`${f.estimatedValue} % (geschätzt) · ${f.partial} · ${f.points} Pkt.`:f?.partial?`${f.value??'?'} % · ${f.partial} · ${f.points} Pkt.`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.reviewAgreementBonus?`<p class="hint"><b>+${s.reviewAgreementBonus} Punkte Bestaetigungsbonus:</b> Eigene Bewertung mindestens 8,5/10 und Steam-Wertung mindestens 85 %. Beide Quellen beurteilen dieses Spiel positiv.</p>`:''}${s.noveltyBonusPercent?`<p class="hint"><b>+10 % Neuentdeckungsbonus:</b> Kein Gruppenmitglied besitzt dieses Spiel (von allen explizit bestätigt). Vor Bonus: ${s.baseScore} Punkte. Maximal 100 Punkte.</p>`:''}${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Bei fehlender eigener Wertung ist Steam die vorläufige Schätzgrundlage. Eigentum, Preis, LAN-Eignung und Vormerkungen zählen weiterhin unabhängig. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Jedes Mitglied kann ein Spiel einmal für die LAN vormerken. Bei drei Mitgliedern entsprechen drei Vormerkungen dem vollen Wunsch-Faktor von 15 %. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
+ return `<details class="panel score-details"><summary>Wie wird der LAN-Score berechnet?</summary><p class="hint">Bis zu 100 Punkte. Die Gewichtung ist 38/25/15/12/10: Eigene Wertung 38 %, Steam 25 %, LAN-Eignung 15 %, Besitz und Preis 12 %, Vormerkungen 10 %. Eure vorhandenen Bewertungen zählen mit ihrem tatsächlichen Durchschnitt. Fehlt eine eigene Bewertung vollständig, nutzt die App vorläufig die Steam-Quote als Schätzung für den 38-%-Faktor. Nur ohne Steam-Daten bleibt der neutrale Platzhalter 5/10. Schätzungen werden nicht als eigene Stimmen gespeichert. Bei unbekanntem Besitz rechnet die Kostenprognose vorsichtig mit möglichen Neukäufen. Stimmen eine eigene starke Wertung (ab 8,0/10) und Steam (ab 85 %) ueberein, kommen 3 Punkte als bestaetigtes Qualitaetssignal hinzu. Steam-Abgleich: vorhandene Spiele = Ja, fehlende Steam-Spiele = Nein; manuelle Angaben gehen vor. Ein Stern (*) kennzeichnet einen vorläufigen Score.</p><div class="score-factor-list">${SCORE_PARTS.map(([key,label])=>{const f=s.factors[key];return `<div class="score-factor"><span>${label}</span><strong>${f?.weight??0} %</strong><span>${f?.estimated?`${f.estimatedValue} % (geschätzt) · ${f.partial} · ${f.points} Pkt.`:f?.partial?`${f.value??'?'} % · ${f.partial} · ${f.points} Pkt.`:f?.value!=null?`${f.value} % · ${f.points} Pkt.`:'noch offen'}</span></div>`}).join('')}</div>${s.reviewAgreementBonus?`<p class="hint"><b>+${s.reviewAgreementBonus} Punkte Bestaetigungsbonus:</b> Eigene Bewertung mindestens 8,0/10 und Steam-Wertung mindestens 85 %. Beide Quellen beurteilen dieses Spiel positiv.</p>`:''}${s.noveltyBonusPercent?`<p class="hint"><b>+10 % Neuentdeckungsbonus:</b> Kein Gruppenmitglied besitzt dieses Spiel (von allen explizit bestätigt). Vor Bonus: ${s.baseScore} Punkte. Maximal 100 Punkte.</p>`:''}${s.hardwareWarnings?.length?`<p class="hint score-hardware-warning">⚠ ${esc(s.hardwareWarnings.join(' · '))}</p>`:''}<p class="hint">Aktuell bekannte Datengrundlage: ${s.coveragePercent} %. Bei fehlender eigener Wertung ist Steam die vorläufige Schätzgrundlage. Eigentum, Preis, LAN-Eignung und Vormerkungen zählen weiterhin unabhängig. Die Kostenwertung zählt vorhandene Lizenzen voll; fehlende Lizenzen erhalten je nach Preis bis zu 100 % (Referenz: 30 € pro Lizenz). Kostenlose Spiele erreichen hier 100 %. Jedes Mitglied kann ein Spiel einmal für die LAN vormerken. Bei drei Mitgliedern entsprechen drei Vormerkungen dem vollen Wunsch-Faktor von 10 %. Hardware zählt nicht als Punkt, sondern löst bei zu schwachen PCs nur eine Warnung aus.</p></details>`;
 }
 function fitFor(g){return groupFit(toCore(g),Math.max(3,groupMembers().length))}
 function avatar(profile,size='small'){const src=st.avatarUrls[profile?.user_id];return `<span class="avatar ${size}" title="${esc(profile?.display_name||'Mitglied')}">${src?`<img src="${esc(src)}" alt="">`:`<span>${esc(profile?.initials||'?')}</span>`}</span>`}
@@ -477,14 +477,18 @@ function displayGames(){
 function gameCard(g){
  const fit=fitFor(g),c=candidates(g),modes=g.modes||[];
  const max=Math.max(0,...modes.map(m=>m.maxHumans||0));
- const team=Math.max(0,...modes.map(m=>m.sameTeamMax??m.maxHumans??0));
- const coop=modes.some(m=>m.type==='coop_pve'),teamPvp=modes.some(m=>m.type==='team_pvp');
- const mode=coop?'Koop / PvE':teamPvp?'Team-PvP':modes.some(m=>m.type==='versus')?'Versus':g.release_status==='upcoming'?'Modus folgt':'Mehrspieler prüfen';
- const versus=modes.some(m=>['versus','ffa'].includes(m.type));
- const privateKnown=modes.some(m=>m.privateSession===true&&Number(m.sameTeamMax||0)>=3);
- const othersRequired=modes.some(m=>Number(m.minHumans||0)>3&&!m.botsCanFill);
- const suitability=!modes.length?'Multiplayer noch unklar':othersRequired?'Weitere Spieler nötig':versus&&max>=3?'Zu dritt gegeneinander':team<3?`Nur ${team} im Team`:privateKnown?(coop?'3er-Koop':'3er-Team'):(coop?'3er-Koop · Lobby prüfen':teamPvp?'3er-Team · öffentlich':'Gemeinsam spielbar · Lobby prüfen');
- const warn=!modes.length||g.release_status!=='available'&&!!g.release_status||othersRequired || (!versus&&team<3) || (!privateKnown&&coop);
+ // Die Auswahl muss zur drei-Personen-Tauglichkeit passen. Far Cry 5
+ // beispielsweise hat Zweier-Kampagnenkoop, aber Arcade-PvP fuer 3+.
+ const playableMode=modes.find(m=>['coop_pve','team_pvp'].includes(m.type)&&Number(m.sameTeamMax??m.maxHumans)>=3)
+  ||modes.find(m=>['versus','ffa'].includes(m.type)&&Number(m.maxHumans)>=3)||modes[0];
+ const mode=playableMode?.type==='coop_pve'?'Koop / PvE':playableMode?.type==='team_pvp'?'Team-PvP':playableMode?.type==='ffa'?'Jeder gegen jeden':playableMode?.type==='versus'?'Versus':g.release_status==='upcoming'?'Modus folgt':'Mehrspieler prüfen';
+ const suitability=g.title==='Far Cry 5'?'3er-Arcade-PvP · Koop max. 2':
+  fit.state==='unknown'?'Multiplayer noch unklar':fit.state==='too_few_slots'?'Weniger als 3 spielbar':
+  fit.state==='requires_others'?'Weitere Spieler erforderlich':fit.state==='split_teams'?'Gemeinsam, verschiedene Teams':
+  ['private_versus','public_versus'].includes(fit.state)?'Zu dritt gegeneinander':
+  playableMode?.type==='coop_pve'?(fit.state==='private_group'?'3er-Koop · privat':'3er-Koop · Lobby prüfen'):
+  playableMode?.type==='team_pvp'?(fit.state==='private_group'?'3er-Team · privat':'3er-Team · öffentlich'):'Gemeinsam spielbar';
+ const warn=fit.score==null||fit.score<.8||g.release_status!=='available'||(playableMode?.type==='coop_pve'&&fit.state==='public_group');
  const steam=g.steam_positive_percent,group=avg(g),fav=isOnLanList(g.id),sc=scoreFor(g);
  const scKnown=sc.score!==null;
  const owners=members();
@@ -571,7 +575,7 @@ function detail(){
  const isAdmin=st.data.role==='admin',eligible=fit.score>=.8,notes=st.data.notes.filter(n=>n.game_id===g.id);
  const privateCoop=(g.modes||[]).some(m=>m.type==='coop_pve'&&m.privateSession===true&&Number(m.sameTeamMax||0)>=3);
  const privateTeam=(g.modes||[]).some(m=>m.type==='team_pvp'&&m.privateSession===true&&Number(m.sameTeamMax||0)>=3);
- const lobbyText=privateCoop?'Private Koop-LAN für drei bestätigt':privateTeam?'3er-Team im privaten LAN-Modus bestätigt':(g.modes||[]).some(m=>m.type==='coop_pve'&&Number(m.sameTeamMax||0)>=3)?'3er-Koop möglich · private Lobby unbestätigt':fit.explanation;
+ const lobbyText=g.title==='Far Cry 5'?'Arcade-PvP bis 6v6 für drei möglich; Kampagnen-Koop nur zu zweit':privateCoop?'Private Koop-Partie für mindestens drei bestätigt':privateTeam?'Privater 3er-Team-Match bestätigt':fit.explanation;
  const owned=confirmedOwner(g.id,st.data.userId),sale=saleInfo(g);
  const tab=st.detailTab||'overview',tabs=[['overview','Spiel'],['group','Unsere LAN'],['more','Mehr']];
  const total=groupMembers().length;

@@ -1,10 +1,10 @@
-/** LAN Library – LAN-Score v1.6. Steam-Prognose bei fehlenden eigenen Bewertungen. */
+/** LAN Library – LAN-Score v1.8: Modusgerechte LAN-Eignung und weniger Preisgewicht. */
 export const DEFAULT_WEIGHTS = Object.freeze({
-  groupRating: 30,
-  steamRating: 20,
+  groupRating: 38,
+  steamRating: 25,
   groupSuitability: 15,
-  ownershipAndPrice: 20,
-  playWishes: 15,
+  ownershipAndPrice: 12,
+  playWishes: 10,
 });
 const clamp = (v, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, v));
 const mean = (xs) => xs.reduce((sum, x) => sum + x, 0) / xs.length;
@@ -28,18 +28,42 @@ export function checkCatalogAdmission(game) {
   return {status:'accepted',reason:max < 3?'Multiplayer vorhanden, höchstens zwei menschliche Spieler':'Multiplayer vorhanden'};
 }
 
-/** Eignung fuer eine private / gemeinsam gespielte Partie.
- * Kein hartes Ausschlusskriterium fuer die Bibliothek.
+/** LAN-Eignung fuer eine Gruppe. Kernfrage: koennen mindestens N Menschen
+ * an derselben Partie teilnehmen? Koop, Team-PvP, Versus und FFA sind
+ * verschiedene Modi; im FFA spielt man absichtlich NICHT in einem Team.
+ * Ein nicht bestaetigter Privat-Lobby-Status darf aus grundsaetzlicher
+ * Drei-Spieler-Tauglichkeit keine untaugliche LAN-Partie machen.
  */
 export function groupFit(game, groupSize) {
-  if (checkCatalogAdmission(game).status !== 'accepted') return {state:'unknown',score:null,explanation:'Spielmodus noch nicht geprüft'};
-  const applicable = (game.modes || []).filter(m => Number(m.sameTeamMax ?? m.maxHumans) >= groupSize);
-  if (!applicable.length) return {state:'too_few_slots',score:0,explanation:`Nicht alle ${groupSize} können im selben Team spielen`};
-  const privateReady=applicable.some(m => m.privateSession === true && ((Number(m.minHumans)||0) <= groupSize || m.botsCanFill === true));
-  if (privateReady) return {state:'private_group',score:1,explanation:'Gemeinsam ohne fremde Spieler möglich'};
-  const canBeCompletedWithBots=applicable.some(m => m.botsCanFill === true);
-  if (canBeCompletedWithBots) return {state:'bots_possible',score:.85,explanation:'Gemeinsam spielbar, zusätzliche Plätze durch Bots'};
-  return {state:'public_group',score:.45,explanation:'Gemeinsam spielen, gegebenenfalls weitere menschliche Spieler nötig'};
+  if (checkCatalogAdmission(game).status !== 'accepted') return {state:'unknown',score:null,explanation:'Mehrspielermodus noch nicht zuverlässig geprüft'};
+  const humans=Math.max(1,Math.trunc(Number(groupSize)||3));
+  const modes=game.modes||[], choices=[];
+  for(const m of modes){
+    const max=Number(m.maxHumans)||0;
+    if(max<humans)continue;
+    const min=Math.max(1,Number(m.minHumans)||1);
+    const selfHosted=min<=humans||m.botsCanFill===true;
+    const privateReady=m.privateSession===true;
+    const sameTeam=Number(m.sameTeamMax??m.maxHumans)||0;
+    const versus=m.type==='versus'||m.type==='ffa';
+    if(versus){
+      choices.push({state:selfHosted?(privateReady?'private_versus':'public_versus'):'requires_others',
+        score:selfHosted?(privateReady?1:.85):.65,
+        explanation:selfHosted?(privateReady?'Gemeinsames privates Spiel gegeneinander möglich':'Gemeinsames Spiel gegeneinander möglich; private Lobby nicht bestätigt'):'Weitere Spieler für diese Partie erforderlich'});
+    } else if(sameTeam>=humans){
+      choices.push({state:selfHosted?(privateReady?'private_group':'public_group'):'requires_others',
+        score:selfHosted?(privateReady?1:.85):.65,
+        explanation:selfHosted?(privateReady?'Alle Gruppenmitglieder können gemeinsam ohne Fremde spielen':'Alle Gruppenmitglieder können gemeinsam spielen; private Lobby nicht bestätigt'):'Weitere Spieler oder Bots für den Start nötig'});
+    } else if(m.type==='team_pvp'){
+      choices.push({state:'split_teams',score:(privateReady&&selfHosted)? .75 : .6,
+        explanation:'Gemeinsame Partie möglich, aber nicht alle im selben Team'});
+    }
+  }
+  if(!choices.length){
+    const max=Math.max(0,...modes.map(m=>Number(m.maxHumans)||0));
+    return {state:'too_few_slots',score:0,explanation:max<humans?`Nur ${max} statt ${humans} menschliche Plätze bestätigt`:`Keine verifizierte Partie für ${humans} gemeinsam`};
+  }
+  return choices.sort((a,b)=>b.score-a.score)[0];
 }
 
 /** Besitz: true|false|null/undefined, null -> UNBEKANNT, nicht false.
@@ -60,7 +84,7 @@ const normalized = (value,max) => Number.isFinite(value) && value>=0 && value<=m
 const ratingsFor = (game, memberIds) => memberIds.map(id=>game.memberRatings?.[id]).filter(n=>Number.isFinite(n)&&n>=1&&n<=10);
 
 /**
- * Besitz + Preis (unveraenderte 20-%-Gewichtung):
+ * Besitz + Preis (neu: 12-%-Gewichtung):
  *  - Bestaetigte Lizenzen zaehlen mit 100 %.
  *  - Fuer noch nicht bestaetigte Besitzer kalkulieren wir vorsichtig die
  *    MOEGLICHEN Kaufkosten (ohne ihren gespeicherten Besitz als "nein" zu setzen).
@@ -94,11 +118,11 @@ export function wishFactor(game,memberIds,{expectedGroupSize=3}={}){
 }
 
 /**
- * Feste Gewichte 30/20/15/20/15. Der Durchschnitt der bereits bestaetigten
- * persoenlichen Bewertungen zaehlt voll innerhalb des 30-%-Faktors; fehlende
+ * Feste Gewichte 38/25/15/12/10. Der Durchschnitt der bereits bestaetigten
+ * persoenlichen Bewertungen zaehlt voll innerhalb des 38-%-Faktors; fehlende
  * Bewertungen werden nicht als fiktive Stimmen hinzugedichtet. Wenn noch
  * NIEMAND eine Wertung abgegeben hat, dient die vorhandene Steam-Quote
- * als vorlaeufige Schaetzung fuer den 30-%-Faktor. Ohne Steam-Daten
+ * als vorlaeufige Schaetzung fuer den 38-%-Faktor. Ohne Steam-Daten
  * bleibt die neutrale Reserve von 5/10 erhalten. Keine geschaetzte
  * Bewertung wird als echte Gruppenstimme gespeichert oder angezeigt.
  * Unbekannte Besitzer werden im Kaufbedarf nur als moegliche Kosten dargestellt.
@@ -156,8 +180,10 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
   // Kleiner, nur bei belegter Uebereinstimmung beider Quellen vergebener Bonus.
   // Er soll echte sehr gute LAN-Erfahrung etwas staerker bestaetigen, ohne
   // unbewertete Spiele pauschal abzuwerten (wie vor v1.9.8).
+  // Eine gute eigene Wertung ab 8/10 UND Steam ab 85 % bestaetigen
+  // die Qualitaet; das gilt auch fuer eine einzige echte Gruppenbewertung.
   const reviewAgreementBonus=baseScore!==null && ratings.length>0 &&
-    factors.groupRating>=.85 && factors.steamRating>=.85 ? 3 : 0;
+    factors.groupRating>=.80 && factors.steamRating>=.85 ? 3 : 0;
   const scoreWithAgreement=baseScore===null?null:Math.min(100,baseScore+reviewAgreementBonus);
   // Neuentdeckungsbonus nur bei bei ALLEN Mitgliedern bestaetigtem Nichtbesitz.
   // Unbekannt ist kein Nichtbesitz; Hardware hat weiterhin keinerlei Einfluss.

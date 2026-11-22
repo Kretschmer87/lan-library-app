@@ -1,5 +1,5 @@
-/* LAN Library 1.9.9: LAN-Score calibration; Steam import fix retained. */
-const CACHE='lan-lib-online-1.9.9';
+/* LAN Library 1.9.11: LAN-Score calibration; Steam import fix retained. */
+const CACHE='lan-lib-online-1.9.11';
 const ROOT=new URL(self.registration.scope).pathname;
 const ASSETS=['','index.html','config.js','styles.css','src/app.mjs','src/steam-import-fix.js','src/demo.mjs','src/repository.mjs','src/score.mjs','manifest.webmanifest','assets/night-summit.svg','assets/header-ribbon.svg','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{
