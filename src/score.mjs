@@ -1,4 +1,4 @@
-/** LAN Library – LAN-Score v1.8: Modusgerechte LAN-Eignung und weniger Preisgewicht. */
+/** LAN Library – LAN-Score v1.9: Selbststaendige LAN-Partien und faire Wertung ohne Steam. */
 export const DEFAULT_WEIGHTS = Object.freeze({
   groupRating: 38,
   steamRating: 25,
@@ -28,40 +28,58 @@ export function checkCatalogAdmission(game) {
   return {status:'accepted',reason:max < 3?'Multiplayer vorhanden, höchstens zwei menschliche Spieler':'Multiplayer vorhanden'};
 }
 
-/** LAN-Eignung fuer eine Gruppe. Kernfrage: koennen mindestens N Menschen
- * an derselben Partie teilnehmen? Koop, Team-PvP, Versus und FFA sind
- * verschiedene Modi; im FFA spielt man absichtlich NICHT in einem Team.
- * Ein nicht bestaetigter Privat-Lobby-Status darf aus grundsaetzlicher
- * Drei-Spieler-Tauglichkeit keine untaugliche LAN-Partie machen.
+/** Die LAN-Eignung misst die eigenstaendige Spielbarkeit mit drei Freunden:
+ * volle Punkte fuer private Coop-PvE-, FFA-/Versus- oder Bot-Partien;
+ * weniger fuer reine PvP-Teamspiele, die fremde Menschen erfordern.
+ * Optional: secondaryMode markiert einen vorhandenen, aber nicht primaeren Koopmodus.
+ * Die LAN-Eignung ist fuer echte LAN-Spiele relevant, unabhaengig von Steam.
  */
 export function groupFit(game, groupSize) {
   if (checkCatalogAdmission(game).status !== 'accepted') return {state:'unknown',score:null,explanation:'Mehrspielermodus noch nicht zuverlässig geprüft'};
   const humans=Math.max(1,Math.trunc(Number(groupSize)||3));
-  const modes=game.modes||[], choices=[];
-  for(const m of modes){
+  const modes=game.modes||[],choices=[];
+  for (const m of modes){
     const max=Number(m.maxHumans)||0;
     if(max<humans)continue;
     const min=Math.max(1,Number(m.minHumans)||1);
-    const selfHosted=min<=humans||m.botsCanFill===true;
+    const bots=m.botsCanFill===true;
+    const alone=min<=humans||bots;
     const privateReady=m.privateSession===true;
     const sameTeam=Number(m.sameTeamMax??m.maxHumans)||0;
-    const versus=m.type==='versus'||m.type==='ffa';
-    if(versus){
-      choices.push({state:selfHosted?(privateReady?'private_versus':'public_versus'):'requires_others',
-        score:selfHosted?(privateReady?1:.85):.65,
-        explanation:selfHosted?(privateReady?'Gemeinsames privates Spiel gegeneinander möglich':'Gemeinsames Spiel gegeneinander möglich; private Lobby nicht bestätigt'):'Weitere Spieler für diese Partie erforderlich'});
-    } else if(sameTeam>=humans){
-      choices.push({state:selfHosted?(privateReady?'private_group':'public_group'):'requires_others',
-        score:selfHosted?(privateReady?1:.85):.65,
-        explanation:selfHosted?(privateReady?'Alle Gruppenmitglieder können gemeinsam ohne Fremde spielen':'Alle Gruppenmitglieder können gemeinsam spielen; private Lobby nicht bestätigt'):'Weitere Spieler oder Bots für den Start nötig'});
+    const secondary=m.secondaryMode===true;
+    let choice;
+    if(m.type==='coop_pve'&&sameTeam>=humans){
+      // Koop mit KI ist auch dann sinnvoll, wenn die private Lobby unklar ist.
+      const base=privateReady?1:.90;
+      choice={state:secondary?'secondary_coop':privateReady?'private_group':'public_group',
+        score:alone?(secondary?Math.min(base,.82):base):.60,
+        explanation:secondary?'Zusätzlicher Koop-gegen-KI-Modus für die Gruppe; nicht der Hauptspielmodus':
+         privateReady?'Alle können gemeinsam privat gegen KI spielen':'Koop gegen KI möglich; private Lobby noch nicht verifiziert'};
+    } else if(m.type==='ffa'||m.type==='versus'){
+      choice={state:alone?(privateReady?'private_versus':'public_versus'):'requires_others',
+        score:alone?(privateReady?1:.72):.55,
+        explanation:alone?(privateReady?'Eigene Partie gegeneinander ohne Fremde möglich':
+        'Gemeinsam gegeneinander, aber private Partie nicht bestätigt'):'Weitere Spieler für diesen Modus erforderlich'};
     } else if(m.type==='team_pvp'){
-      choices.push({state:'split_teams',score:(privateReady&&selfHosted)? .75 : .6,
-        explanation:'Gemeinsame Partie möglich, aber nicht alle im selben Team'});
+      if(bots){
+        choice={state:privateReady?'bots_possible':'public_bots',score:privateReady?1:.90,
+          explanation:'Als LAN-Team gegen KI-Gegner spielbar'};
+      } else {
+        choice={state:privateReady?'private_pvp':'public_pvp',score:privateReady?.75:.60,
+          explanation:privateReady?'Privates Team-PvP möglich, benötigt aber Gegenspieler':
+          'Team-PvP mit fremden Spielern auf öffentlichen Servern; keine KI-Gegner bestätigt'};
+      }
+      if(sameTeam<humans){choice={state:'split_teams',score:Math.min(choice.score,.60),
+        explanation:'Nicht alle LAN-Teilnehmer können im selben Team spielen'};}
+    } else if(sameTeam>=humans) {
+      choice={state:privateReady?'private_group':'public_group',score:privateReady?.85:.70,
+        explanation:privateReady?'Eigene gemeinsame Partie möglich':'Gemeinsame Partie möglich; weiterer Modus unklar'};
     }
+    if(choice)choices.push(choice);
   }
   if(!choices.length){
     const max=Math.max(0,...modes.map(m=>Number(m.maxHumans)||0));
-    return {state:'too_few_slots',score:0,explanation:max<humans?`Nur ${max} statt ${humans} menschliche Plätze bestätigt`:`Keine verifizierte Partie für ${humans} gemeinsam`};
+    return {state:'too_few_slots',score:0,explanation:max<humans?`Nur ${max} statt ${humans} menschliche Plätze bestätigt`:`Keine bestätigte gemeinsame Partie für ${humans}`};
   }
   return choices.sort((a,b)=>b.score-a.score)[0];
 }
@@ -118,11 +136,11 @@ export function wishFactor(game,memberIds,{expectedGroupSize=3}={}){
 }
 
 /**
- * Feste Gewichte 38/25/15/12/10. Der Durchschnitt der bereits bestaetigten
- * persoenlichen Bewertungen zaehlt voll innerhalb des 38-%-Faktors; fehlende
+ * Feste Gewichte 38/25/15/12/10. Fehlende Steam-Werte: vorhandene echte
+ * Gruppenwertung bekommt das Steam-Gewicht als zusaetzlichen Anteil; fehlende
  * Bewertungen werden nicht als fiktive Stimmen hinzugedichtet. Wenn noch
  * NIEMAND eine Wertung abgegeben hat, dient die vorhandene Steam-Quote
- * als vorlaeufige Schaetzung fuer den 38-%-Faktor. Ohne Steam-Daten
+ * als vorlaeufige Schaetzung fuer den 38-%-Faktor. Ohne beide Daten
  * bleibt die neutrale Reserve von 5/10 erhalten. Keine geschaetzte
  * Bewertung wird als echte Gruppenstimme gespeichert oder angezeigt.
  * Unbekannte Besitzer werden im Kaufbedarf nur als moegliche Kosten dargestellt.
@@ -167,8 +185,14 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
   // eigene Bewertung ausgegeben; die Datenabdeckung bleibt entsprechend niedrig.
   const groupRatingEstimate=factors.groupRating==null ? (factors.steamRating ?? .5) : null;
   const neutral={groupRating:groupRatingEstimate??.5,steamRating:.5,groupSuitability:.25,ownershipAndPrice:.5,playWishes:0};
+  // Eine nicht existierende Steam-Wertung ist keine schlechte Steam-Wertung.
+  // Nur wenn eine ECHTE eigene Wertung vorliegt, werden die 25 Steam-% auf diese
+  // Bewertung umgelegt. Keine erfundenen 90 %, keine Datenbankschreiboperation.
+  const noSteamWithGroupRating=factors.steamRating===null && factors.groupRating!==null;
+  const effectiveWeights=noSteamWithGroupRating?
+    {...weights,groupRating:weights.groupRating+weights.steamRating,steamRating:0}:weights;
   let weightedSum=0,observedWeight=0;
-  for(const [key,weight] of Object.entries(weights)){
+  for(const [key,weight] of Object.entries(effectiveWeights)){
     const value=factors[key];
     weightedSum+=(value==null?neutral[key]:value)*weight;
     observedWeight+=(confidence[key]??0)*weight;
@@ -191,24 +215,26 @@ export function calculateLanScore(game, {memberIds,memberHardware={},weights=DEF
   const score=undiscovered?Math.min(100,Math.round(scoreWithAgreement*1.10)):scoreWithAgreement;
   return {
     score, baseScore, reviewAgreementBonus, noveltyBonusPercent:undiscovered?10:0,
+    noSteamWithGroupRating, effectiveWeights,
     provisional:coverage<.995||memberIds.length<expectedGroupSize||notReleased,
     coveragePercent:Math.round(coverage*100),
     factors:Object.fromEntries(Object.entries(factors).map(([key,value])=>[key,{
-      value:value==null?null:Math.round(value*100),weight:weights[key]??0,
+      value:value==null?null:Math.round(value*100),weight:effectiveWeights[key]??0,
       estimated:key==='groupRating'&&value==null,
       estimatedValue:key==='groupRating'&&value==null?Math.round(neutral.groupRating*100):null,
       known:value!=null && (key!=='ownershipAndPrice'||confidence.ownershipAndPrice>=1),
       partial:key==='groupRating'?`${rateCount}/${expected} Stimmen${ratings.length?' · Ø '+mean(ratings).toFixed(1)+'/10':factors.steamRating!=null?' · Steam-Prognose (keine eigene Wertung)':' · neutraler Platzhalter (Steam fehlt)'}`:
         key==='ownershipAndPrice'&&factors.ownershipAndPrice!=null&&confidence.ownershipAndPrice<1?`Kaufkosten-Prognose · ${ownershipKnown}/${expected} Besitzstände` :null,
-      points:Math.round((value==null?neutral[key]:value)*(weights[key]??0)*10)/10,
+      points:Math.round((value==null?neutral[key]:value)*(effectiveWeights[key]??0)*10)/10,
     }])),
     warnings:[
       ...(notReleased?['Noch nicht veröffentlicht oder Edition ungeklärt – kein vergleichbarer LAN-Score']:[]),
+      ...(noSteamWithGroupRating?['Keine Steam-Bewertung vorhanden: Bewertungsgewicht wird auf eure echte Wertung umgelegt (kein Abzug)']:[]),
       ...(rateCount<expected?[rateCount===0&&factors.steamRating!=null?'Noch keine eigene Bewertung: Steam-Prognose fliesst vorlaeufig in den LAN-Score ein':`Eigene Bewertung: ${rateCount} von ${expected} Stimmen bekannt; vorhandener Mittelwert zählt vorläufig`]:[]),
       ...(memberIds.length<expectedGroupSize?[`Noch ${expectedGroupSize-memberIds.length} LAN-Mitglied${expectedGroupSize-memberIds.length===1?'':'er'} nicht beigetreten`]:[]),
       ...(factors.ownershipAndPrice===null?['Besitz oder Preis noch nicht vollständig bekannt']:ownershipEvidence<1?['Besitz noch nicht bei allen Mitgliedern bestätigt; mögliche Kaufkosten vorsichtig geschätzt']:[]),
       ...hardwareWarnings,
-      ...(fit.state!=='private_group'?[fit.explanation]:[])
+      ...(!['private_group','private_versus','bots_possible'].includes(fit.state)?[fit.explanation]:[])
     ],
     acquisitionCostEUR:acquisition.total,
     groupFit:fit.state,
