@@ -133,7 +133,7 @@ export class CloudRepository {
   async updateGameClassification(gameId,fields){ensure(this.membership?.role==='admin','Nur Admins können Kategorien bearbeiten');return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body:fields})}
    async updateGameMetadata(gameId,fields){
      ensure(this.membership?.role==='admin','Nur Admins können Spieldaten bearbeiten');
-     const allowed=['title','steam_app_id','description','genre','hardware_tier','reference_url','release_status','release_label','modes','multiplayer_status'];
+     const allowed=['title','steam_app_id','description','genre','hardware_tier','hardware_tier_source','hardware_tier_checked_at','reference_url','release_status','release_label','modes','multiplayer_status'];
      const body=Object.fromEntries(Object.entries(fields).filter(([key])=>allowed.includes(key)));
      return this.rest('games',`id=eq.${gameId}&group_id=eq.${this.membership.group_id}`,{method:'PATCH',headers:{Prefer:'return=representation'},body});
    }

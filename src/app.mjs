@@ -1,8 +1,8 @@
-import {CloudRepository} from './repository.mjs?v=1.9.12';
-import {DemoRepository} from './demo.mjs?v=1.9.12';
-import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.12';
+import {CloudRepository} from './repository.mjs?v=1.9.13';
+import {DemoRepository} from './demo.mjs?v=1.9.13';
+import {calculateLanScore,checkCatalogAdmission,groupFit,groupAcquisitionCost} from './score.mjs?v=1.9.13';
 
-const APP_VERSION='1.9.12';
+const APP_VERSION='1.9.13';
 const conf=window.LAN_CONFIG||{};
 const DEMO=!(conf.supabaseUrl&&conf.supabaseAnonKey);
 const repo=DEMO?new DemoRepository():new CloudRepository(conf);
@@ -16,7 +16,7 @@ const savedInvite=(()=>{try{return localStorage.getItem(INVITE_KEY)||sessionStor
 const resolvedInvite=incomingInvite||savedInvite;
 const persistInvite=token=>{try{if(token){localStorage.setItem(INVITE_KEY,token);sessionStorage.setItem('lan-invite',token)}else{localStorage.removeItem(INVITE_KEY);sessionStorage.removeItem('lan-invite')}}catch{}};
 
-const st={screen:'catalog',accountTab:'login',data:null,user:null,membership:null,search:'',sort:'name',desc:false,filtersOpen:false,openedChoice:null,viewMode:'rich',filters:{genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false},gameId:null,profileId:null,menu:null,loading:false,toast:'',invite:resolvedInvite,allowCreateGroup:false,avatarUrls:{},commentCategory:'Kommentar',eventId:null,wishSearch:'',wishExpanded:false,steamResults:[],steamChoice:null,steamSearching:false,steamError:'',addMethod:'auto',addGenres:[],addClassification:{genres:[],mechanics:[],themes:[]},steamQuery:'',steamOwnershipMessage:'',releaseMine:false,releaseBusy:false,releaseError:'',detailTab:'overview',saleOnly:false,showHardware:(()=>{try{return localStorage.getItem('lan-show-hardware')!=='0'}catch{return true}})()};
+const st={screen:'catalog',accountTab:'login',data:null,user:null,membership:null,search:'',sort:'name',desc:false,filtersOpen:false,openedChoice:null,viewMode:'rich',filters:{genres:[],mechanics:[],themes:[],modes:[],matchModes:{genres:'all',mechanics:'any',themes:'any',modes:'any'},owned:'',maxPrice:'',maxHardware:'',minScore:'',trio:false},gameId:null,profileId:null,menu:null,loading:false,toast:'',invite:resolvedInvite,allowCreateGroup:false,avatarUrls:{},commentCategory:'Kommentar',eventId:null,wishSearch:'',wishExpanded:false,steamResults:[],steamChoice:null,steamSearching:false,steamError:'',addMethod:'auto',addGenres:[],addClassification:{genres:[],mechanics:[],themes:[]},steamQuery:'',steamOwnershipMessage:'',hardwareSyncBusy:false,hardwareSyncMessage:'',releaseMine:false,releaseBusy:false,releaseError:'',detailTab:'overview',saleOnly:false,showHardware:(()=>{try{return localStorage.getItem('lan-show-hardware')!=='0'}catch{return true}})()};
 if(st.invite)persistInvite(st.invite);
 if(location.search.includes('invite='))history.replaceState(null,'',location.pathname+location.hash);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -136,109 +136,24 @@ const avg=g=>{const nums=st.data.ratings.filter(r=>r.game_id===g.id&&confirmedOw
 const ownedCount=g=>groupMembers().filter(m=>owner(g.id,m.user_id)?.status==='yes').length;
 // 'Unbesessen' ist nur verifiziert, wenn jedes Gruppenmitglied explizit 'nein' gesetzt hat.
 const isUnowned=g=>g.release_status==='available'&&!g.group_shared_access&&groupMembers().length>0&&groupMembers().every(m=>owner(g.id,m.user_id)?.status==='no');
-// Vorschlagswerte: allgemeine Hardware-Anforderungen (1080p, mittel bis hoch, ca. 40 FPS).
-// Konservative redaktionelle Voreinstufungen fuer identifizierte Spiele, KEINE Benchmarks.
-// Ein manuell gespeicherter Datenbankwert hat ausnahmslos Vorrang.
-const INITIAL_HARDWARE_BY_STEAM=Object.freeze({
- 240:1,
- 440:1,
- 13230:1,
- 24790:1,
- 41070:2,
- 49520:2,
- 105600:1,
- 200710:1,
- 202710:1,
- 210770:2,
- 225840:1,
- 228380:2,
- 252950:2,
- 275850:3,
- 346110:4,
- 359550:3,
- 360170:2,
- 361420:2,
- 427410:3,
- 431240:1,
- 460930:3,
- 469600:2,
- 477160:1,
- 493520:3,
- 526870:4,
- 548430:2,
- 552500:3,
- 552520:3,
- 553850:4,
- 578080:3,
- 585420:2,
- 594650:4,
- 632360:2,
- 648800:2,
- 699130:3,
- 780310:3,
- 880940:2,
- 892970:3,
- 924970:3,
- 934700:3,
- 962130:3,
- 1063420:3,
- 1149460:5,
- 1158940:3,
- 1159690:4,
- 1171690:4,
- 1172470:3,
- 1172620:3,
- 1203620:4,
- 1217060:2,
- 1237970:2,
- 1285190:5,
- 1326470:4,
- 1335830:3,
- 1374490:4,
- 1431300:4,
- 1446780:2,
- 1486920:3,
- 1551360:3,
- 1566690:5,
- 1623730:4,
- 1641960:4,
- 1677110:3,
- 1721110:3,
- 1757300:4,
- 1808500:4,
- 1898300:4,
- 2080690:3,
- 2221490:3,
- 2225070:2,
- 2231380:4,
- 2285150:4,
- 2344520:3,
- 2444750:3,
- 2605790:3,
- 3228590:3,
- 3338950:3
-});
-const INITIAL_HARDWARE_BY_NAME=Object.freeze({
- 'warcraft iii: the frozen throne 1.8 (offline)':1,
- 'starcraft ii':2,
- 'renegade x':2,
- 'fortnite':3
-});
+// Hardwarestufen werden nun im Katalog persistiert. Unsichere Werte bleiben offen.
+// Die Datenbank unterscheidet manuelle Angaben, redaktionelle Vorschlaege und
+// aus den veroeffentlichten Steam-Systemanforderungen abgeleitete Schätzwerte.
 export function hardwareTierForGame(g){
- const manual=Number(g?.hardware_tier);
- if(g?.hardware_tier!=null&&Number.isInteger(manual)&&manual>=1&&manual<=5)return manual;
- if(!g||g.release_status==='upcoming'||g.release_status==='unverified')return null;
- const id=Number(g.steam_app_id);
- if(Number.isSafeInteger(id)&&Object.hasOwn(INITIAL_HARDWARE_BY_STEAM,id))return INITIAL_HARDWARE_BY_STEAM[id];
- const title=String(g.title||'').normalize('NFC').toLocaleLowerCase('de-DE').trim();
- return Object.hasOwn(INITIAL_HARDWARE_BY_NAME,title)?INITIAL_HARDWARE_BY_NAME[title]:null;
+ const t=Number(g?.hardware_tier);
+ return g?.hardware_tier!=null&&Number.isInteger(t)&&t>=1&&t<=5?t:null;
 }
+const hardwareIsEstimated=g=>g?.hardware_tier_source!=='manual';
+const hardwareOrigin=g=>({
+  manual:'Manuell gepflegt',editorial_estimate:'Vorläufige Katalog-Einstufung',
+  steam_recommended:'Schätzung aus Steam-Empfehlung',
+  steam_minimum:'Schätzung aus Steam-Mindestanforderung'
+})[g?.hardware_tier_source]||'Vorläufiger Hardwarewert';
 const hardwareBadge=g=>{
  if(!st.showHardware)return '';
  const tier=hardwareTierForGame(g);
- if(tier==null)return ''; // Keine Fragezeichen auf den Covern oder in der Spieleliste.
- const label=g.hardware_tier!=null?'Manuell festgelegt':'Vorlaeufige Einschaetzung';
- return `<span class="hardware-tier-bubble tier-${tier}" title="Hardware ${tier}/5 · ${label}" aria-label="Hardware-Anforderung Stufe ${tier} von 5${g.hardware_tier==null?' (vorläufig)':''}">${tier}</span>`;
+ if(tier==null)return '';
+ return `<span class="hardware-tier-bubble tier-${tier}" title="Hardware ${tier}/5 · ${esc(hardwareOrigin(g))}" aria-label="Hardware-Anforderung Stufe ${tier} von 5${hardwareIsEstimated(g)?' (vorläufig)':''}">${tier}</span>`;
 };
 function saleInfo(g){
  const off=Number(g.steam_discount_percent),old=Number(g.steam_regular_price_eur),now=Number(g.price_eur);
@@ -601,7 +516,7 @@ function detail(){
  <div class="detail-experience">
    <div class="detail-overline">SPIELÜBERSICHT</div><h2>Auf einen Blick</h2>
    <p class="detail-description">${esc(g.description||'Für dieses Spiel ist noch keine Beschreibung hinterlegt. Gameplay findest du über das YouTube-Symbol oben.')}</p>
-   <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':privateTeam?'✓ 3er-Team in eigener LAN-Partie':eligible?'✓ Zu dritt spielbar':'! Gruppenspiel prüfen: Lobby/Teamgröße unklar'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${hardwareTierForGame(g)!=null?`<span class="detail-feature">Hardware ${hardwareTierForGame(g)}/5${g.hardware_tier==null?' · vorläufig':''}</span>`:''}</div>
+   <div class="detail-feature-row"><span class="detail-feature ${eligible?'positive':'caution'}">${privateCoop?'✓ 3er-Koop ohne Fremdspieler':privateTeam?'✓ 3er-Team in eigener LAN-Partie':eligible?'✓ Zu dritt spielbar':'! Gruppenspiel prüfen: Lobby/Teamgröße unklar'}</span><span class="detail-feature">${Math.max(0,...(g.modes||[]).map(m=>m.maxHumans||0))||'?'} Spieler</span>${hardwareTierForGame(g)!=null?`<span class="detail-feature" title="${esc(hardwareOrigin(g))}">Hardware ${hardwareTierForGame(g)}/5${hardwareIsEstimated(g)?' · vorläufig':''}</span>`:''}</div>
 
  </div>
  ${sale?`<div class="detail-sale-panel"><div><strong>${sale.off}% Rabatt bei Steam</strong><span>${euro(sale.old)} regulär · ${euro(sale.now)} aktuell</span></div>${steamSaleCTA}</div>`:''}
@@ -651,7 +566,7 @@ function steamEvidenceNote(choice){
 }
 function add(){return pageShell(`<main class="detail"><button class="back" data-action="go" data-screen="catalog">‹ Zurück zur Bibliothek</button><div class="intro"><h1>Spiel hinzufügen</h1><p>Steam-Suche mit Übernahme von Spieldaten oder manuell eintragen.</p></div>
  <div class="panel steam-import"><h2>Automatisch aus Steam übernehmen</h2><p class="hint">Spielname oder Steam-Link eingeben, Treffer auswählen, Daten prüfen. Der Multiplayer-Modus muss vor dem Speichern bestätigt werden.</p><div class="steam-search-row"><input id="steam-search" type="search" value="${esc(st.steamQuery||'')}" autocomplete="off" placeholder="Spiel suchen, z. B. Borderlands 2"><button class="btn primary" type="button" data-action="steam-search">Suchen</button></div><div id="steam-search-feedback">${st.steamSearching?'Suche läuft …':esc(st.steamError||'')}</div><div id="steam-results">${steamResults()}</div>${st.steamChoice?`<div class="steam-selected"><strong>Ausgewählt: ${esc(st.steamChoice.name)}</strong><span>App-ID: ${esc(st.steamChoice.id)} · verfügbare Informationen werden ins Formular übernommen.</span><button type="button" class="btn ghost" data-action="steam-clear">Auswahl zurücksetzen</button></div>`:''}</div>
- <div class="panel" id="manual-entry"><h2>Spieldaten prüfen und ergänzen</h2><p class="hint">Veröffentlichte Spiele benötigen einen bestätigten Mehrspielermodus. Für angekündigte Titel können Multiplayer-Details bis zum Release offen bleiben.</p><form id="game-form"><label>Spielname<input name="title" value="${esc(st.steamChoice?.name||'')}" minlength="2" maxlength="130" required placeholder="z. B. Dungeon Defenders"></label><label>Steam-App-ID oder Steam-Link (optional)<input name="steam" value="${st.steamChoice?esc(st.steamChoice.id):''}" placeholder="https://store.steampowered.com/app/..."></label><div class="form-two"><label>Verfügbarkeit<select name="releaseStatus"><option value="available">Bereits erhältlich</option><option value="upcoming" ${st.steamChoice?.comingSoon?'selected':''}>Noch nicht veröffentlicht</option></select></label><label>Genaues Release-Datum (optional)<input name="releaseDate" type="date" value="${esc(st.steamChoice?.releaseDate||'')}"></label></div><label>Angekündigter Zeitraum (optional)<input name="releaseLabel" maxlength="140" value="${esc(st.steamChoice?.releaseLabel||'')}" placeholder="z. B. Sommer 2027 / Termin offen"></label><label>Genre<input name="genre" value="${esc(st.steamChoice?.genre||'')}" placeholder="z. B. RPG · Koop"></label><details class="add-genres"><summary>Hauptgenre und Zusatz-Tags festlegen</summary><p class="hint">Überprüfe die automatisch vorgeschlagenen Genres und Tags; sie lassen sich später ändern.</p>${[['genres','Genre / Spieltyp'],['mechanics','Vorlieben / Tags']].map(([key,label])=>`<section class="edit-taxon-section"><h3>${label}</h3>${TAXONOMY_GROUPS[key].map(([heading,items])=>`<div class="multi-group"><strong>${esc(heading)}</strong><div class="multi-choices">${items.map(([tag,name])=>`<button type="button" data-action="add-classification" data-key="${key}" data-value="${tag}" class="multi-chip ${(st.addClassification[key]||[]).includes(tag)?'active':''}" aria-pressed="${(st.addClassification[key]||[]).includes(tag)}">${esc(name)}</button>`).join('')}</div></div>`).join('')}</section>`).join('')}</details>${steamEvidenceNote(st.steamChoice)}<label>Spielmodus <span class="hint">Bitte eine zutreffende Spielart wählen</span></label><div class="tag-picker game-modes">${[['coop_pve','Echter Koop / PvE'],['team_pvp','Team-PvP'],['versus','Versus'],['ffa','Free-for-All']].map(([v,t])=>`<button type="button" data-action="mode" data-value="${v}" class="mode-btn">${t}</button>`).join('')}</div><input id="mode-value" name="mode" type="hidden" value=""><div class="form-two"><label>Max. menschliche Spieler<input name="maxPlayers" type="number" min="2" max="100" value="4" required></label><label>Max. im selben Team<input name="teamPlayers" type="number" min="1" max="100" value="4" required></label></div><label class="check-row"><input type="checkbox" name="privateSession" checked> Mit eurer Gruppe ohne Fremdspieler möglich</label><label class="check-row"><input type="checkbox" name="bots"> Zusätzliche Spieler durch Bots ersetzbar</label><div class="form-two"><label>Preis (€), optional<input name="price" value="${st.steamChoice?.priceEUR??''}" type="number" min="0" step=".01" placeholder="Unbekannt"></label><label>Hardware-Stufe, optional<input name="hardware" type="number" min="1" max="5" placeholder="1–5"></label></div><label>Beschreibung (optional)<textarea name="description" placeholder="Was macht das Spiel aus?">${esc(st.steamChoice?.description||'')}</textarea></label><label class="check-row confirm"><input type="checkbox" name="confirmed"> Ich habe geprüft, dass das Spiel einen echten Mehrspielermodus besitzt.</label><button class="btn primary full" type="submit">＋ Zur gemeinsamen Bibliothek hinzufügen</button></form></div></main>`)}
+ <div class="panel" id="manual-entry"><h2>Spieldaten prüfen und ergänzen</h2><p class="hint">Veröffentlichte Spiele benötigen einen bestätigten Mehrspielermodus. Für angekündigte Titel können Multiplayer-Details bis zum Release offen bleiben.</p><form id="game-form"><label>Spielname<input name="title" value="${esc(st.steamChoice?.name||'')}" minlength="2" maxlength="130" required placeholder="z. B. Dungeon Defenders"></label><label>Steam-App-ID oder Steam-Link (optional)<input name="steam" value="${st.steamChoice?esc(st.steamChoice.id):''}" placeholder="https://store.steampowered.com/app/..."></label><div class="form-two"><label>Verfügbarkeit<select name="releaseStatus"><option value="available">Bereits erhältlich</option><option value="upcoming" ${st.steamChoice?.comingSoon?'selected':''}>Noch nicht veröffentlicht</option></select></label><label>Genaues Release-Datum (optional)<input name="releaseDate" type="date" value="${esc(st.steamChoice?.releaseDate||'')}"></label></div><label>Angekündigter Zeitraum (optional)<input name="releaseLabel" maxlength="140" value="${esc(st.steamChoice?.releaseLabel||'')}" placeholder="z. B. Sommer 2027 / Termin offen"></label><label>Genre<input name="genre" value="${esc(st.steamChoice?.genre||'')}" placeholder="z. B. RPG · Koop"></label><details class="add-genres"><summary>Hauptgenre und Zusatz-Tags festlegen</summary><p class="hint">Überprüfe die automatisch vorgeschlagenen Genres und Tags; sie lassen sich später ändern.</p>${[['genres','Genre / Spieltyp'],['mechanics','Vorlieben / Tags']].map(([key,label])=>`<section class="edit-taxon-section"><h3>${label}</h3>${TAXONOMY_GROUPS[key].map(([heading,items])=>`<div class="multi-group"><strong>${esc(heading)}</strong><div class="multi-choices">${items.map(([tag,name])=>`<button type="button" data-action="add-classification" data-key="${key}" data-value="${tag}" class="multi-chip ${(st.addClassification[key]||[]).includes(tag)?'active':''}" aria-pressed="${(st.addClassification[key]||[]).includes(tag)}">${esc(name)}</button>`).join('')}</div></div>`).join('')}</section>`).join('')}</details>${steamEvidenceNote(st.steamChoice)}<label>Spielmodus <span class="hint">Bitte eine zutreffende Spielart wählen</span></label><div class="tag-picker game-modes">${[['coop_pve','Echter Koop / PvE'],['team_pvp','Team-PvP'],['versus','Versus'],['ffa','Free-for-All']].map(([v,t])=>`<button type="button" data-action="mode" data-value="${v}" class="mode-btn">${t}</button>`).join('')}</div><input id="mode-value" name="mode" type="hidden" value=""><div class="form-two"><label>Max. menschliche Spieler<input name="maxPlayers" type="number" min="2" max="100" value="4" required></label><label>Max. im selben Team<input name="teamPlayers" type="number" min="1" max="100" value="4" required></label></div><label class="check-row"><input type="checkbox" name="privateSession" checked> Mit eurer Gruppe ohne Fremdspieler möglich</label><label class="check-row"><input type="checkbox" name="bots"> Zusätzliche Spieler durch Bots ersetzbar</label><div class="form-two"><label>Preis (€), optional<input name="price" value="${st.steamChoice?.priceEUR??''}" type="number" min="0" step=".01" placeholder="Unbekannt"></label><label>Hardware-Stufe, optional<input name="hardware" type="number" min="1" max="5" value="${st.steamChoice?.hardwareTier??''}" placeholder="1–5"></label></div>${st.steamChoice?.hardwareTier?`<p class="hint">Hardware-Vorschlag aus Steam-Systemanforderungen: Stufe ${st.steamChoice.hardwareTier}/5 (${st.steamChoice.hardwareSource==='steam_recommended'?'empfohlene Hardware':'Mindestanforderungen'}). Unverbindliche Schätzung, bitte bei Bedarf korrigieren.</p>`:'<p class="hint">Ohne eindeutig erkennbare Steam-Hardwaredaten bleibt die Einstufung offen.</p>'}<label>Beschreibung (optional)<textarea name="description" placeholder="Was macht das Spiel aus?">${esc(st.steamChoice?.description||'')}</textarea></label><label class="check-row confirm"><input type="checkbox" name="confirmed"> Ich habe geprüft, dass das Spiel einen echten Mehrspielermodus besitzt.</label><button class="btn primary full" type="submit">＋ Zur gemeinsamen Bibliothek hinzufügen</button></form></div></main>`)}
 function membersPage(){return pageShell(`<main><div class="intro"><h1>Mitglieder</h1><p>Private Gruppe · ${members().length} Mitglieder</p></div><div class="panel"><h2>Eure Gruppe</h2>${members().map(m=>`<button class="member-link" data-action="open-profile" data-id="${m.user_id}">${avatar(m.profile,'medium')}<span><strong>${esc(m.profile?.display_name||'Mitglied')}</strong><small>${esc(m.profile?.initials)} · ${m.role==='admin'?'Administrator':'Mitglied'}</small></span><b>›</b></button>`).join('')}</div>${st.data.role==='admin'?`<div class="panel"><h2>Aufgaben zuweisen</h2><p class="hint">Die Empfänger sehen diese Aufgaben unter Einstellungen → Dein Einstieg.</p><form id="assign-task-form"><label>Mitglied<select name="userId" required>${members().map(m=>`<option value="${m.user_id}">${esc(m.profile?.display_name||'Mitglied')}</option>`).join('')}</select></label><label>Aufgabe<select name="taskType"><option value="steam_library">Steam-Bibliothek freigeben</option><option value="hardware">PC-Hardware eintragen</option><option value="profile">Profilbild ergänzen</option><option value="custom">Eigene Aufgabe</option></select></label><label>Zusatzinfo (optional)<input name="note" maxlength="650" placeholder="z. B. vor der nächsten LAN"></label><label>Eigener Titel (bei eigener Aufgabe)<input name="customTitle" maxlength="150" placeholder="z. B. Mikrofon testen"></label><button class="btn ghost full" type="submit">Aufgabe zuweisen</button></form><div class="task-list-admin">${(st.data.tasks||[]).map(t=>`<div class="task-line"><span>${esc(st.data.profiles.find(p=>p.user_id===t.assigned_to)?.initials||'?')} · ${esc(t.title)}</span><small>${t.status==='done'?'✓ Erledigt':'Offen'}</small></div>`).join('')}</div></div>`:''}${st.data.role==='admin'?`<div class="panel"><h2>Mitglied einladen</h2><p class="hint">Einladungscode 7 Tage gültig, maximal 3 Verwendungen. Nur eingeloggte Benutzer können beitreten.</p><button class="btn primary full" data-action="invite">Einladungslink erstellen</button><div id="invite-result"></div></div>`:''}<div class="panel"><h2>Mein Konto</h2><button class="btn ghost full" data-action="logout">Abmelden</button></div></main>`)}
 function profilePage(){const profile=st.data.profiles.find(p=>p.user_id===st.profileId);if(!profile){st.screen='members';return membersPage()}const its=st.data.ownership.filter(o=>o.user_id===st.profileId&&o.status==='yes').map(o=>st.data.games.find(g=>g.id===o.game_id)).filter(Boolean);const my=st.data.ownership.filter(o=>o.user_id===st.data.userId&&o.status==='yes').map(o=>o.game_id);const overlap=its.filter(g=>my.includes(g.id));const ratings=st.data.ratings.filter(r=>r.user_id===st.profileId);const mine=st.profileId===st.data.userId;
  return pageShell(`<main class="detail"><button class="back" data-action="go" data-screen="members">‹ Zurück zu Mitglieder</button><div class="profile-head">${avatar(profile,'large')}<div><h1>${esc(profile.display_name)}</h1><span class="tag">${esc(profile.initials)}</span></div></div>${hardwarePanel(profile.user_id,mine)}${mine?`<div class="panel"><h2>Mein Profil bearbeiten</h2><form id="profile-form"><label>Name<input name="displayName" value="${esc(profile.display_name)}" minlength="2" maxlength="60" required></label><label>Kürzel<input name="initials" value="${esc(profile.initials)}" maxlength="3" required></label><button type="submit" class="btn ghost full">Änderungen speichern</button></form><form id="avatar-form"><label>Profilbild auswählen<input type="file" name="photo" accept="image/png,image/jpeg,image/webp" required></label><button class="btn ghost full" type="submit">Profilbild hochladen</button></form></div>`:''}<div class="panel"><h2>Spiele von ${esc(profile.initials)} <span class="muted">(${its.length})</span></h2>${its.length?`<div class="tile-grid">${its.slice(0,16).map(g=>`<button class="tile" data-action="open-game" data-id="${g.id}">${cover(g)}<strong>${esc(g.title)}</strong></button>`).join('')}</div>`:`<p class="hint">Noch keine bestätigten Besitztitel.</p>`}</div>${!mine?`<div class="panel"><h2>Gemeinsam mit mir (${overlap.length})</h2><p class="hint">Besitz-Schnittmenge, keine automatische Garantie für Crossplay.</p>${overlap.map(g=>`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} ›</button>`).join('')||'<p class="hint">Noch keine bestätigte Überschneidung.</p>'}</div>`:''}<div class="panel"><h2>Bewertungen (${ratings.length})</h2>${ratings.length?ratings.map(r=>{const g=st.data.games.find(g=>g.id===r.game_id);return g?`<button class="line-item" data-action="open-game" data-id="${g.id}">${esc(g.title)} <strong>${r.rating}/10</strong></button>`:''}).join(''):'<p class="hint">Noch keine Bewertungen.</p>'}</div></main>`)}
@@ -665,12 +580,15 @@ function adminMetadataIssues(g){
  if(g.release_status==='available'&&(!Array.isArray(g.modes)||!g.modes.length))issues.push('Mehrspielerangaben prüfen');
  return issues;
 }
+const hardwareNeedsSteamCheck=()=>allGames().filter(g=>g.hardware_tier==null&&!g.hardware_tier_checked_at&&Number.isSafeInteger(Number(g.steam_app_id))&&Number(g.steam_app_id)>0&&g.release_status==='available');
 function adminMaintenanceCard(){
  if(st.data.role!=='admin')return '';
  const entries=allGames().map(game=>({game,issues:adminMetadataIssues(game)})).filter(item=>item.issues.length);
  const undecided=(st.data.candidates||[]).filter(x=>x.review_status==='needs_review'&&!x.linked_game_id);
  return `<div class="panel admin-maintenance"><h2>Admin-To-dos <span class="tag warn">${entries.length+undecided.length} offen</span></h2>
- <p class="hint">Automatisch aus fehlenden oder ungeklärten Metadaten ermittelt. Das sind Prüfhinweise, keine als sicher bestätigten Fehler. Die Einträge bleiben bestehen, bis du die Daten ergänzt.</p>
+ <p class="hint">Geprüfte Daten und vorläufige Hardwarewerte sind gespeichert. Fehlende oder unklare Angaben bleiben als To-do erhalten.</p>
+ ${hardwareNeedsSteamCheck().length?`<button class="btn ghost full" data-action="sync-hardware" ${st.hardwareSyncBusy?'disabled':''}>${st.hardwareSyncBusy?'Steam-Anforderungen werden geprüft …':`↻ Hardware-Anforderungen von Steam prüfen (${hardwareNeedsSteamCheck().length} offen)`}</button><p class="hint">Prüft bis zu acht ausstehende Steam-Spiele pro Durchlauf. Nur eindeutige Grafikkarten-Empfehlungen werden als Schätzwert gespeichert. Vorhandene Einträge werden nicht überschrieben.</p>`:''}
+ ${st.hardwareSyncMessage?`<p class="hint" role="status">${esc(st.hardwareSyncMessage)}</p>`:''}
  <details><summary>Spiele zur Nachpflege (${entries.length})</summary><div class="maintenance-list">${entries.length?entries.map(({game,issues})=>`<div class="maintenance-row"><span><strong>${esc(game.title)}</strong><small>${esc(issues.join(' · '))}</small></span><button type="button" class="btn ghost" data-action="admin-edit-game" data-id="${game.id}">Bearbeiten</button></div>`).join(''):'<p class="hint">Alle Katalogspiele sind ausreichend gepflegt.</p>'}</div></details>
  ${undecided.length?`<details><summary>Ursprungsliste / Editionszuordnung (${undecided.length})</summary><div class="maintenance-list">${undecided.map(x=>`<div class="maintenance-row"><span><strong>${esc(x.suggested_title||x.original_title)}</strong><small>${esc(x.review_note||'Edition oder Eintrag prüfen')}</small></span></div>`).join('')}</div><p class="hint">Diese Kandidaten liegen außerhalb des regulären Spielekatalogs. Zum Zuordnen erst den richtigen Titel im Katalog bestimmen.</p></details>`:''}</div>`;
 }
@@ -689,7 +607,7 @@ function adminGameDataEditor(g){
  <label class="check-row"><input type="checkbox" name="privateSession" ${g.modes?.[0]?.privateSession===true?'checked':''}> Private Partie für eure Gruppe möglich</label>
  <label>Beschreibung (optional)<textarea name="description" maxlength="5000">${value(g.description)}</textarea></label>
  <label>Hardware-Leistungsindex<select name="hardware"><option value="">Unbekannt / noch zu prüfen</option>${[1,2,3,4,5].map(t=>`<option value="${t}" ${g.hardware_tier===t?'selected':''}>${t} – ${{1:'Sehr gering',2:'Gering',3:'Mittel',4:'Hoch',5:'Sehr hoch'}[t]}</option>`).join('')}</select></label>
- <p class="hint">${g.hardware_tier==null&&hardwareTierForGame(g)!=null?`Vorläufiger Vorschlag: Stufe ${hardwareTierForGame(g)}. Wähle eine Stufe, um diese dauerhaft zu speichern. `:''}Manuelle Einstufungen haben Vorrang; Vorschläge sind keine gemessenen FPS.</p>
+ <p class="hint">${hardwareTierForGame(g)!=null?`Aktueller Wert: Stufe ${hardwareTierForGame(g)} (${esc(hardwareOrigin(g))}). `:''}Manuelle Änderungen werden als manuell gepflegt gespeichert; Vorschläge sind keine gemessenen FPS.</p>
  <button class="btn primary full" type="submit">Änderungen speichern</button></form></details></div>`;
 }
 
@@ -828,6 +746,26 @@ async function execute(a,el){switch(a){
  case 'comment-type':st.commentCategory=el.dataset.value;render();return;
  case 'mode':document.querySelector('#mode-value').value=el.dataset.value;document.querySelectorAll('.mode-btn').forEach(x=>x.classList.toggle('selected',x===el));return;
  case 'steam-search':{const input=document.querySelector('#steam-search');const term=input?.value.trim()||'';if(term.length<2)throw Error('Bitte mindestens zwei Zeichen eingeben.');st.steamQuery=term;st.steamSearching=true;st.steamResults=[];st.steamError='';render();try{st.steamResults=await repo.searchSteam(term);if(!st.steamResults.length)st.steamError='Keine Steam-Treffer gefunden. Bitte alternativ manuell erfassen.';}catch(e){st.steamError='Steam-Suche nicht erreichbar: '+e.message;}st.steamSearching=false;render();return;}
+ case 'sync-hardware':{
+  if(st.data?.role!=='admin')throw Error('Nur Administratoren können Hardwaredaten synchronisieren.');
+  if(st.hardwareSyncBusy)return;
+  const pending=hardwareNeedsSteamCheck().slice(0,8);
+  if(!pending.length){showToast('Alle verfügbaren Hardwaredaten sind bereits erfasst.');return;}
+  st.hardwareSyncBusy=true;render();let saved=0,unresolved=0,failures=0;
+  try{
+   for(const game of pending){
+    try{
+     const details=await repo.steamDetails(Number(game.steam_app_id));
+     if(!Number.isInteger(details.hardwareTier)||details.hardwareTier<1||details.hardwareTier>5){await repo.updateGameMetadata(game.id,{hardware_tier_checked_at:new Date().toISOString()});unresolved++;continue;}
+     if(!['steam_recommended','steam_minimum'].includes(details.hardwareSource)){unresolved++;continue;}
+     await repo.updateGameMetadata(game.id,{hardware_tier:details.hardwareTier,hardware_tier_source:details.hardwareSource,hardware_tier_checked_at:new Date().toISOString()});saved++;
+    }catch(e){failures++;}
+   }
+   await load();
+   st.hardwareSyncMessage=`Steam-Hardwareprüfung: ${saved} Einstufungen ergänzt, ${unresolved} nicht eindeutig, ${failures} technische Fehler.`;
+  }finally{st.hardwareSyncBusy=false;render();}
+  return;
+ }
  case 'steam-pick':{const id=Number(el.dataset.id);st.steamSearching=true;render();try{st.steamChoice=await repo.steamDetails(id);st.addGenres=[...(st.steamChoice.genreTags||[])];st.addClassification=suggestTaxonomy(st.steamChoice);st.steamError='';}catch(e){st.steamError='Details konnten nicht geladen werden: '+e.message;}st.steamSearching=false;render();return;}
  case 'steam-clear':st.steamChoice=null;st.steamResults=[];st.steamError='';st.steamQuery='';st.addGenres=[];st.addClassification=emptyClassification();render();return;
  case 'add-classification':{const key=el.dataset.key,tag=el.dataset.value;const current=st.addClassification[key]||[];st.addClassification[key]=current.includes(tag)?current.filter(x=>x!==tag):[...current,tag];el.classList.toggle('active',st.addClassification[key].includes(tag));el.setAttribute('aria-pressed',String(st.addClassification[key].includes(tag)));return;}
@@ -869,7 +807,9 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','
     const steam=String(d.steam||'').trim();if(steam&&!/^[0-9]{2,10}$/.test(steam))throw Error('Steam-ID ungültig.');
     const title=String(d.title||'').trim();if(title.length<2||title.length>130)throw Error('Ungültiger Spielname.');
     if(steam&&game.steam_app_id&&String(game.steam_app_id)!==steam&&!confirm('Bestehende Steam-App-ID ändern? Dadurch ändert sich auch der Steam-Link.'))return;
-    const fields={title,steam_app_id:steam?Number(steam):null,reference_url:String(d.referenceUrl||'').trim()||null,genre:String(d.genre||'').trim()||null,description:String(d.description||'').trim()||null,hardware_tier:d.hardware?Number(d.hardware):null,release_status:String(d.releaseStatus||game.release_status),release_label:String(d.releaseLabel||'').trim().slice(0,140)||null};
+    const selectedTier=d.hardware?Number(d.hardware):null;
+    const hardwareOriginChanged=selectedTier!==hardwareTierForGame(game);
+    const fields={title,steam_app_id:steam?Number(steam):null,reference_url:String(d.referenceUrl||'').trim()||null,genre:String(d.genre||'').trim()||null,description:String(d.description||'').trim()||null,hardware_tier:selectedTier,hardware_tier_source:selectedTier==null?null:(hardwareOriginChanged?'manual':game.hardware_tier_source||'manual'),hardware_tier_checked_at:hardwareOriginChanged?new Date().toISOString():game.hardware_tier_checked_at,release_status:String(d.releaseStatus||game.release_status),release_label:String(d.releaseLabel||'').trim().slice(0,140)||null};
     if(d.modeEdit&&d.modeEdit!=='keep'){
       if(d.modeEdit==='clear'){fields.modes=[];fields.multiplayer_status='unknown'}
       else{const max=Number(d.maxPlayers),team=Number(d.teamPlayers);if(!Number.isInteger(max)||max<2||max>100||!Number.isInteger(team)||team<1||team>max)throw Error('Bitte gültige Spielerzahlen eintragen.');
@@ -911,7 +851,7 @@ document.addEventListener('submit',async e=>{const f=e.target;if(!['auth-form','
  if(d.confirmed&&d.mode&&team>max)throw Error('Teamgröße darf nicht größer als die Gesamtspielerzahl sein.');
  const modes=d.confirmed&&d.mode?[{type:d.mode,maxHumans:max,sameTeamMax:team,minHumans:1,botsCanFill:!!d.bots,privateSession:!!d.privateSession}]:[];
  const date=String(d.releaseDate||'');if(date&&releaseDay(date)===null)throw Error('Bitte ein gültiges Release-Datum wählen.');
- const entry={release_status:isUpcoming?'upcoming':'available',release_date:isUpcoming&&date?date:null,release_label:isUpcoming?String(d.releaseLabel||'Termin noch offen').slice(0,140):null,title:d.title.trim(),steam_app_id:appId,genre:d.genre.trim()||null,genre_tags:[...st.addGenres],category_genres:[...st.addClassification.genres],category_mechanics:[...st.addClassification.mechanics],category_themes:[...st.addClassification.themes],cover_url:st.steamChoice?.cover||null,description:d.description.trim()||null,multiplayer_status:modes.length?'confirmed':'unknown',modes,price_eur:d.price!==''?Number(d.price):null,hardware_tier:d.hardware!==''?Number(d.hardware):null,steam_positive_percent:null,source_label:st.steamChoice?'Steam-Metadaten übernommen; Multiplayer manuell bestätigt':'Manuell durch Gruppenmitglied eingetragen'};
+ const entry={release_status:isUpcoming?'upcoming':'available',release_date:isUpcoming&&date?date:null,release_label:isUpcoming?String(d.releaseLabel||'Termin noch offen').slice(0,140):null,title:d.title.trim(),steam_app_id:appId,genre:d.genre.trim()||null,genre_tags:[...st.addGenres],category_genres:[...st.addClassification.genres],category_mechanics:[...st.addClassification.mechanics],category_themes:[...st.addClassification.themes],cover_url:st.steamChoice?.cover||null,description:d.description.trim()||null,multiplayer_status:modes.length?'confirmed':'unknown',modes,price_eur:d.price!==''?Number(d.price):null,hardware_tier:d.hardware!==''?Number(d.hardware):null,hardware_tier_source:d.hardware!==''?(st.steamChoice?.hardwareTier===Number(d.hardware)?st.steamChoice.hardwareSource||'steam_recommended':'manual'):null,hardware_tier_checked_at:d.hardware!==''?new Date().toISOString():null,steam_positive_percent:null,source_label:st.steamChoice?'Steam-Metadaten übernommen; Multiplayer manuell bestätigt':'Manuell durch Gruppenmitglied eingetragen'};
  if(st.data.games.some(x=>x.title.toLocaleLowerCase('de')===entry.title.toLocaleLowerCase('de')||appId&&x.steam_app_id===appId))throw Error('Dieses Spiel ist bereits im Katalog vorhanden.');if(!isUpcoming){const admit=checkCatalogAdmission({name:entry.title,catalogKind:'game',multiplayerStatus:'confirmed',modes});if(admit.status!=='accepted')throw Error(admit.reason);}const g=await repo.addGame(entry);await load();st.gameId=g.id;st.screen='detail';st.steamChoice=null;st.steamResults=[];st.steamQuery='';st.addGenres=[];st.addClassification=emptyClassification();render();scrollTo(0,0);showToast('Spiel zur Bibliothek hinzugefügt.');return}
  if(f.id==='comment-form'){const body=d.body.trim();if(!body)throw Error('Bitte zuerst Text eingeben.');await repo.addComment(st.gameId,st.commentCategory,body);await load();showToast('Kommentar gespeichert.');return}
  if(f.id==='profile-form'){await repo.updateProfile(d.displayName.trim(),d.initials.trim().toUpperCase());await load();showToast('Profil gespeichert.');return}
